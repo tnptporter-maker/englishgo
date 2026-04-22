@@ -184,7 +184,7 @@ function LoginScreen({ login }) {
   );
 }
 
-function HomeScreen({ user, logout, go, categories, sources, studyDays, reviewItems }) {
+function HomeScreen({ user, logout, go, categories, sources, lessons, items, progress, studyDays, reviewItems }) {
   const [showMenu, setShowMenu] = useState(false);
   const getCatSources = (catId) => sources.filter(s => s.CategoryID === catId);
   return (
@@ -193,7 +193,7 @@ function HomeScreen({ user, logout, go, categories, sources, studyDays, reviewIt
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: C.text }}>HOME</div>
           <div style={{ position: "relative" }}>
-            <img src={user.photoURL || profileImg} width={38} height={38}
+            <img src={profileImg} width={38} height={38}
               style={{ borderRadius: "50%", cursor: "pointer", border: `2px solid ${C.border}` }}
               onClick={() => setShowMenu(p => !p)} alt="프로필" />
             {showMenu && (
@@ -216,13 +216,14 @@ function HomeScreen({ user, logout, go, categories, sources, studyDays, reviewIt
         </div>
 
         <div onClick={() => go("calendar")} style={{ ...S.card, background: "#FFD966", cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(0,0,0,0.55)", marginBottom: 6 }}>🔥 학습 일수</div>
             <div style={{ fontSize: 36, fontWeight: 800, color: "#333", lineHeight: 1 }}>{studyDays.length}<span style={{ fontSize: 16, fontWeight: 600 }}> 일</span></div>
-            <div style={{ fontSize: 11, color: "rgba(0,0,0,0.4)", marginTop: 4 }}>탭해서 달력 보기</div>
           </div>
-          <div style={{ fontSize: 44, opacity: 0.25 }}>📅</div>
+          <div style={{ fontSize: 44, opacity: 0.25 }}>🗓️</div>
         </div>
+
+        <TodayLesson go={go} lessons={lessons} sources={sources} items={items} progress={progress} />
 
         <div style={{ marginBottom: 16 }}>
           <div style={S.label}>복습 ({reviewItems.length})</div>
@@ -251,6 +252,65 @@ function HomeScreen({ user, logout, go, categories, sources, studyDays, reviewIt
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+function TodayLesson({ go, lessons, sources, items, progress }) {
+  // 그만하기한 레슨 확인
+  const inProgressLesson = (() => {
+    for (const lesson of lessons) {
+      const key = `quak_quiz_${lesson.LessonID}_${lesson.SourceID}`;
+      const saved = parseInt(localStorage.getItem(key) || "0");
+      if (saved > 0) return { lesson, savedIdx: saved };
+    }
+    return null;
+  })();
+
+  // 마지막 학습한 레슨 찾기
+  const lastStudiedLesson = (() => {
+    let lastDate = "";
+    let lastLesson = null;
+    Object.entries(progress).forEach(([itemId, prog]) => {
+      const history = prog.history || [];
+      if (history.length > 0) {
+        const lastHistory = history[history.length - 1];
+        if (lastHistory.date >= lastDate) {
+          lastDate = lastHistory.date;
+          const item = items.find(i => i.ItemID === itemId);
+          if (item) lastLesson = lessons.find(l => l.LessonID === item.LessonID && l.SourceID === item.SourceID);
+        }
+      }
+    });
+    return lastLesson;
+  })();
+
+  // 다음 레슨 찾기
+  const nextLesson = (() => {
+    if (inProgressLesson) return inProgressLesson.lesson;
+    if (!lastStudiedLesson) return lessons[0] || null;
+    const srcLessons = lessons
+      .filter(l => l.SourceID === lastStudiedLesson.SourceID)
+      .sort((a, b) => Number(a.Order) - Number(b.Order));
+    const idx = srcLessons.findIndex(l => l.LessonID === lastStudiedLesson.LessonID);
+    return srcLessons[idx + 1] || lessons.find(l => l.SourceID !== lastStudiedLesson.SourceID) || srcLessons[0];
+  })();
+
+  if (!nextLesson) return null;
+
+  const src = sources.find(s => s.SourceID === nextLesson.SourceID);
+  const lessonItems = items.filter(i => i.LessonID === nextLesson.LessonID && i.SourceID === nextLesson.SourceID);
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={S.label}>오늘의 레슨</div>
+      <div onClick={() => go("study", { lessonId: nextLesson.LessonID, sourceId: nextLesson.SourceID })}
+        style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, borderLeft: `4px solid ${C.primary}` }}>
+        <div style={{ flex: 1 }}>
+          <div style={S.listTitle}>{nextLesson.Title}</div>
+          <div style={S.listSub}>{src?.Name} · {lessonItems.length}문장 {inProgressLesson ? "· 이어서 학습" : ""}</div>
+        </div>
+        <div style={{ ...S.btn, background: C.primary, color: "#fff", padding: "8px 16px", fontSize: 13 }}>시작 →</div>
       </div>
     </div>
   );
@@ -560,7 +620,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
               {answer && <div style={{ color: C.sub, fontSize: 12 }}>내 답: {answer}</div>}
             </div>
             <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 14 }}>다시 학습하기</button>
+              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 14 }}>다음에 다시 학습하기</button>
               <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: "#DCFCE7", color: C.success, fontSize: 14 }}>다음</button>
             </div>
           </>
@@ -651,7 +711,7 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
               {answer && <div style={{ color: C.sub, fontSize: 12, marginTop: 8 }}>내 답: {answer}</div>}
             </div>
             <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 14 }}>다시 학습하기</button>
+              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 14 }}>다음에 다시 학습하기</button>
               <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: "#DCFCE7", color: C.success, fontSize: 14 }}>다음</button>
             </div>
           </>

@@ -256,6 +256,82 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
     </div>
   );
 }
+function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase }) {
+  const [repeatCount, setRepeatCount] = useState(0);
+  const [isListening, setIsListening] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+  const recRef = useRef(null);
+
+  useEffect(() => {
+    setRepeatCount(0);
+    setFeedback(null);
+  }, [previewIdx]);
+
+  const startRepeat = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert("Chrome을 사용해주세요."); return; }
+    speak(item.English);
+    setTimeout(() => {
+      const r = new SR();
+      r.lang = "en-US"; r.continuous = false; r.interimResults = false;
+      r.onresult = e => {
+        const said = e.results[0][0].transcript.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+        const expected = item.English.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+        const isGood = said === expected || said.includes(expected.split(" ").slice(0, 3).join(" "));
+        setFeedback(isGood ? "good" : "try");
+        setRepeatCount(p => p + 1);
+        setIsListening(false);
+      };
+      r.onerror = () => setIsListening(false);
+      r.onend = () => setIsListening(false);
+      r.start();
+      recRef.current = r;
+      setIsListening(true);
+    }, 2000);
+  };
+
+  return (
+    <>
+      <div style={{ ...S.card, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", marginBottom: 16 }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 12 }}>{item.English}</div>
+        <div style={{ color: C.sub, fontSize: 15, marginBottom: 20 }}>{item.Korean}</div>
+        <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginBottom: 12 }}>🔊 듣기</button>
+        <button onClick={startRepeat} disabled={isListening} style={{ ...S.btn, background: isListening ? C.border : "#FEF3C7", color: "#92400E", fontSize: 13, opacity: isListening ? 0.6 : 1 }}>
+          {isListening ? "🎤 듣고 있어요..." : "🗣️ 따라 말하기"}
+        </button>
+        {feedback && (
+          <div style={{ marginTop: 10, fontSize: 14, fontWeight: 700, color: feedback === "good" ? C.success : C.warn }}>
+            {feedback === "good" ? "✅ 잘 했어요!" : "🔄 다시 해봐요!"}
+          </div>
+        )}
+        {repeatCount > 0 && (
+          <div style={{ marginTop: 6, fontSize: 12, color: C.sub }}>따라 말하기 {repeatCount}회 완료</div>
+        )}
+      </div>
+      <div style={{ display: "flex", gap: 12 }}>
+        <button onClick={() => setPreviewIdx(p => Math.max(0, p - 1))} disabled={previewIdx === 0} style={{ ...S.btn, flex: 1, background: C.border, color: C.text, opacity: previewIdx === 0 ? 0.4 : 1 }}>← 이전</button>
+        {previewIdx < lessonItems.length - 1 ? (
+          <button
+            onClick={() => { const next = previewIdx + 1; setPreviewIdx(next); setTimeout(() => speak(lessonItems[next]?.English || ""), 3000); }}
+            disabled={repeatCount < 3}
+            style={{ ...S.btn, flex: 1, background: repeatCount >= 3 ? C.primary : C.border, color: repeatCount >= 3 ? "#fff" : C.sub, opacity: 1 }}
+          >
+            {repeatCount >= 3 ? "다음 →" : `다음 (${repeatCount}/3)`}
+          </button>
+        ) : (
+          <button
+            onClick={() => { setPhase("quiz"); setTimeout(() => speak(lessonItems[0].English), 300); }}
+            disabled={repeatCount < 3}
+            style={{ ...S.btn, flex: 1, background: repeatCount >= 3 ? C.success : C.border, color: repeatCount >= 3 ? "#fff" : C.sub }}
+          >
+            {repeatCount >= 3 ? "퀴즈 시작!" : `퀴즈 (${repeatCount}/3)`}
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
 function TodayLesson({ go, lessons, sources, items, progress }) {
   // 그만하기한 레슨 확인
   const inProgressLesson = (() => {
@@ -552,23 +628,16 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
           ) : (
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <div style={{ fontSize: 12, color: C.sub, textAlign: "center", marginBottom: 12 }}>
-                미리보기 {ytId ? previewIdx : previewIdx + 1} / {lessonItems.length}
+                연습하기 {ytId ? previewIdx : previewIdx + 1} / {lessonItems.length}
               </div>
               {/* 카드 */}
-              <div style={{ ...S.card, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", marginBottom: 16 }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 12 }}>{item.English}</div>
-                <div style={{ color: C.sub, fontSize: 15, marginBottom: 20 }}>{item.Korean}</div>
-                <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13 }}>🔊 듣기</button>
-              </div>
-              {/* 버튼 */}
-              <div style={{ display: "flex", gap: 12 }}>
-                <button onClick={() => setPreviewIdx(p => Math.max(0, p - 1))} disabled={previewIdx === 0} style={{ ...S.btn, flex: 1, background: C.border, color: C.text, opacity: previewIdx === 0 ? 0.4 : 1 }}>← 이전</button>
-                {previewIdx < lessonItems.length - 1 ? (
-                  <button onClick={() => setPreviewIdx(p => p + 1)} style={{ ...S.btn, flex: 1, background: C.primary, color: "#fff" }}>다음 →</button>
-                ) : (
-                  <button onClick={() => { setPhase("quiz"); setTimeout(() => speak(lessonItems[0].English), 300); }} style={{ ...S.btn, flex: 1, background: C.success, color: "#fff" }}>퀴즈 시작!</button>
-                )}
-              </div>
+              <PreviewCard
+                item={item}
+                previewIdx={previewIdx}
+                lessonItems={lessonItems}
+                setPreviewIdx={setPreviewIdx}
+                setPhase={setPhase}
+              />
             </div>
           )}
         </div>

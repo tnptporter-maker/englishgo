@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import duckImg from "./assets/duck.png";
+import duck2Img from "./assets/duck2.png";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAtCebZRWhwVnWfOREs1sU9BNyvQHPDtGI",
@@ -451,7 +452,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
 
   if (done) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+      <img src={duck2Img} width={120} height={120} alt="완료" style={{ marginBottom: 24, objectFit: "contain" }} />
       <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>레슨 완료!</div>
       <div style={{ color: C.sub, fontSize: 14, marginBottom: 32 }}>{lessonItems.length}문장 학습했어요</div>
       <button onClick={() => go("lesson")} style={{ ...S.btn, background: C.primary, color: "#fff", width: "100%", maxWidth: 320, padding: 16, fontSize: 15 }}>← 레슨 목록으로</button>

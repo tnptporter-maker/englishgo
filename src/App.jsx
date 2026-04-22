@@ -217,9 +217,9 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
         </div>
 
         <div onClick={() => go("calendar")} style={{ ...S.card, background: "#FFD966", cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(0,0,0,0.55)", marginBottom: 6 }}>🔥 학습 일수</div>
-            <div style={{ fontSize: 36, fontWeight: 800, color: "#333", lineHeight: 1 }}>{studyDays.length}<span style={{ fontSize: 16, fontWeight: 600 }}> 일</span></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "rgba(0,0,0,0.55)" }}>🔥 학습 일수</div>
+            <div style={{ fontSize: 40, fontWeight: 800, color: "#333", lineHeight: 1 }}>{studyDays.length}<span style={{ fontSize: 18, fontWeight: 600 }}> 일</span></div>
           </div>
           <div style={{ fontSize: 44, opacity: 0.25 }}>🗓️</div>
         </div>

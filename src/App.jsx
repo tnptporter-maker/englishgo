@@ -269,12 +269,12 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
   useEffect(() => {
     setRepeatCount(0);
     setFeedback(null);
+    setTimeout(() => speak(item.English), 3000);
   }, [previewIdx]);
 
   const startRepeat = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { alert("Chrome을 사용해주세요."); return; }
-    speak(item.English);
     setTimeout(() => {
       const r = new SR();
       r.lang = "en-US"; r.continuous = false; r.interimResults = false;
@@ -380,7 +380,7 @@ function ScriptLessonListScreen({ go, nav, sources, lessons, items }) {
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{src?.Name}</div>
+          <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.4 }}>{src?.Name}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {srcLessons.map(lesson => {
@@ -563,7 +563,7 @@ function LessonScreen({ go, nav, sources, lessons, items, progress }) {
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{src?.Name}</div>
+          <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.4 }}>{src?.Name}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {srcLessons.map(lesson => {

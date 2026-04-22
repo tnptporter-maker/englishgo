@@ -54,9 +54,11 @@ async function fetchSheet(sheetName) {
 const speak = (text) => {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "en-US"; u.rate = 0.9;
-  window.speechSynthesis.speak(u);
+  setTimeout(() => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US"; u.rate = 0.9;
+    window.speechSynthesis.speak(u);
+  }, 300);
 };
 
 const C = {
@@ -158,6 +160,8 @@ export default function App() {
       {screen === "lesson" && <LessonScreen {...shared} />}
       {screen === "study" && <StudyScreen {...shared} />}
       {screen === "review" && <ReviewScreen {...shared} />}
+      {screen === "scriptLesson" && <ScriptLessonListScreen {...shared} />}
+      {screen === "scriptItem" && <ScriptLessonScreen {...shared} />}
     </>
   );
 }
@@ -216,17 +220,17 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
           </div>
         </div>
 
-        <div onClick={() => go("calendar")} style={{ ...S.card, background: "#FFD966", cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 32, fontWeight: 800, color: "#333" }}>🔥 {studyDays.length}일</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(0,0,0,0.55)", marginTop: 4 }}>학습 일수</div>
+        <div onClick={() => go("calendar")} style={{ ...S.card, background: "#FFD966", cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ flex: 1, textAlign: "center" }}>
+            <span style={{ fontSize: 20, fontWeight: 800, color: "#333" }}>🔥 학습 일수 &nbsp; {studyDays.length}일</span>
           </div>
+          <div style={{ fontSize: 28, opacity: 0.4 }}>🗓️</div>
         </div>
 
         <TodayLesson go={go} lessons={lessons} sources={sources} items={items} progress={progress} />
 
         <div style={{ marginBottom: 16 }}>
-          <div style={S.label}>복습 ({reviewItems.length})</div>
+          <div style={S.label}>복습</div>
           {reviewItems.length === 0 ? (
             <div style={{ ...S.card, color: C.sub, fontSize: 14 }}>✅ 오늘 복습할 내용이 없어요!</div>
           ) : (
@@ -293,6 +297,7 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
   return (
     <>
       <div style={{ ...S.card, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 12 }}>🗣️ 따라 말하기 3회 실시</div>
         <div style={{ fontSize: 18, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 12 }}>{item.English}</div>
         <div style={{ color: C.sub, fontSize: 15, marginBottom: 20 }}>{item.Korean}</div>
         <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginBottom: 12 }}>🔊 듣기</button>
@@ -329,6 +334,70 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
         )}
       </div>
     </>
+  );
+}
+function ScriptLessonScreen({ go, nav, sources, lessons, items }) {
+  const src = sources.find(s => s.SourceID === nav.sourceId);
+  const srcLessons = lessons.filter(l => l.SourceID === nav.sourceId).sort((a, b) => Number(a.Order) - Number(b.Order));
+  const lesson = srcLessons.find(l => l.LessonID === nav.lessonId);
+  const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
+
+  return (
+    <div style={S.page}>
+      <div style={S.pageInner}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <button onClick={() => go("scriptLesson", { sourceId: nav.sourceId })} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>{lesson?.Title}</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={S.card}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: C.sub, marginBottom: 12 }}>🇰🇷 한국어</div>
+            {lessonItems.map((item, i) => (
+              <div key={item.ItemID} style={{ padding: "8px 0", borderBottom: i < lessonItems.length - 1 ? `1px solid ${C.border}` : "none", fontSize: 15, color: C.text }}>
+                {item.Korean}
+              </div>
+            ))}
+          </div>
+          <div style={S.card}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: C.sub, marginBottom: 12 }}>🇺🇸 English</div>
+            {lessonItems.map((item, i) => (
+              <div key={item.ItemID} style={{ padding: "8px 0", borderBottom: i < lessonItems.length - 1 ? `1px solid ${C.border}` : "none", fontSize: 15, color: C.text }}>
+                {item.English}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScriptLessonListScreen({ go, nav, sources, lessons, items }) {
+  const src = sources.find(s => s.SourceID === nav.sourceId);
+  const srcLessons = lessons.filter(l => l.SourceID === nav.sourceId).sort((a, b) => Number(a.Order) - Number(b.Order));
+  return (
+    <div style={S.page}>
+      <div style={S.pageInner}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>{src?.Name}</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {srcLessons.map(lesson => {
+            const lessonItems = items.filter(i => i.LessonID === lesson.LessonID && i.SourceID === lesson.SourceID);
+            return (
+              <div key={lesson.LessonID} onClick={() => go("scriptItem", { lessonId: lesson.LessonID, sourceId: lesson.SourceID })} style={{ ...S.card, display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={S.listTitle}>{lesson.Title}</div>
+                  <div style={S.listSub}>{lessonItems.length}문장</div>
+                </div>
+                <div style={{ color: C.sub, fontSize: 18 }}>›</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -380,7 +449,11 @@ function TodayLesson({ go, lessons, sources, items, progress }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={S.label}>오늘의 레슨</div>
-      <div onClick={() => go("study", { lessonId: nextLesson.LessonID, sourceId: nextLesson.SourceID })}
+      <div onClick={() => {
+  const src = sources.find(s => s.SourceID === nextLesson.SourceID);
+  const cat = src ? src.CategoryID : null;
+  go("study", { lessonId: nextLesson.LessonID, sourceId: nextLesson.SourceID, catId: cat });
+}}
         style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, borderLeft: `4px solid ${C.primary}` }}>
         <div style={{ flex: 1 }}>
           <div style={S.listTitle}>{nextLesson.Title}</div>
@@ -448,11 +521,26 @@ function SourceScreen({ go, nav, categories, sources, lessons }) {
           <div style={{ fontWeight: 700, fontSize: 16 }}>{cat?.Name}</div>
         </div>
         <div style={S.label}>교재 선택</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
           {catSources.map(src => {
             const srcLessons = lessons.filter(l => l.SourceID === src.SourceID);
             return (
               <div key={src.SourceID} onClick={() => go("lesson", { sourceId: src.SourceID })} style={{ ...S.card, display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={S.listTitle}>{src.Name}</div>
+                  <div style={S.listSub}>{src.Type} · {srcLessons.length}개 레슨</div>
+                </div>
+                <div style={{ color: C.sub, fontSize: 18 }}>›</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={S.label}>Script</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {catSources.map(src => {
+            const srcLessons = lessons.filter(l => l.SourceID === src.SourceID);
+            return (
+              <div key={src.SourceID} onClick={() => go("scriptLesson", { sourceId: src.SourceID, catId: nav.catId })} style={{ ...S.card, display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
                 <div style={{ flex: 1 }}>
                   <div style={S.listTitle}>{src.Name}</div>
                   <div style={S.listSub}>{src.Type} · {srcLessons.length}개 레슨</div>
@@ -475,7 +563,7 @@ function LessonScreen({ go, nav, sources, lessons, items, progress }) {
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 15, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{src?.Name}</div>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>{src?.Name}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {srcLessons.map(lesson => {
@@ -566,6 +654,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
 
   const handleQuit = () => {
     setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
+    localStorage.setItem(saveKey, String(quizIdx));
     go("lesson");
   };
 

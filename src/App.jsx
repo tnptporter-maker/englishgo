@@ -375,7 +375,7 @@ function ScriptLessonScreen({ go, nav, sources, lessons, items }) {
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <button onClick={() => go("scriptLesson", { sourceId: nav.sourceId })} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.4 }}>{lesson?.Title}</div>
+          <div style={{ fontWeight: 600, fontSize: 12, color: C.sub, flex: 1, lineHeight: 1.4 }}>{lesson?.Title}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={S.card}>
@@ -435,8 +435,9 @@ function TodayLesson({ go, lessons, sources, items, progress }) {
     for (const lesson of lessons) {
       const key = `quak_quiz_${lesson.LessonID}_${lesson.SourceID}`;
       const saved = localStorage.getItem(key);
-      if (saved !== null && saved !== "0") return { lesson, savedIdx: saved };
+      if (saved !== null && saved !== "0" && saved !== "done") return { lesson, savedIdx: saved };
     }
+    // localStorage에 없어도 마지막으로 학습한 레슨 확인
     return null;
   })();
 
@@ -630,8 +631,8 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
   const recRef = useRef(null);
 
   useEffect(() => {
-    const saved = parseInt(localStorage.getItem(saveKey) || "0");
-    if (saved > 0) setShowResume(true);
+    const saved = localStorage.getItem(saveKey);
+    if (saved !== null && saved !== "0" && saved !== "done") setShowResume(true);
   }, [saveKey]);
 
   const extractYouTubeId = (url) => {
@@ -670,7 +671,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
     });
     setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
     if (quizIdx + 1 >= lessonItems.length) {
-      localStorage.removeItem(saveKey);
+      localStorage.setItem(saveKey, "done");
       setDone(true);
     } else {
       const nextIdx = quizIdx + 1;

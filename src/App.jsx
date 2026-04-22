@@ -269,8 +269,9 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
   useEffect(() => {
     setRepeatCount(0);
     setFeedback(null);
-    setTimeout(() => speak(item.English), 3000);
-  }, [previewIdx]);
+    const timer = setTimeout(() => speak(item.English), 800);
+    return () => clearTimeout(timer);
+  }, [item.English]);
 
   const startRepeat = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -297,31 +298,33 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
   return (
     <>
       <div style={{ ...S.card, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", marginBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 12 }}>🗣️ 따라 말하기 3회 실시</div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 12 }}>{item.English}</div>
-        <div style={{ color: C.sub, fontSize: 15, marginBottom: 20 }}>{item.Korean}</div>
-        <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginBottom: 12 }}>🔊 듣기</button>
-        <button onClick={startRepeat} disabled={isListening} style={{ ...S.btn, background: isListening ? C.border : "#FEF3C7", color: "#92400E", fontSize: 13, opacity: isListening ? 0.6 : 1 }}>
-          {isListening ? "🎤 듣고 있어요..." : "🗣️ 따라 말하기"}
-        </button>
+        <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 12 }}>🎤 Speaking 3회 실시</div>
+        <div style={{ color: C.sub, fontSize: 17, marginBottom: 12 }}>{item.Korean}</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 20 }}>{item.English}</div>
+        <div style={{ display: "flex", gap: 10, width: "100%", marginBottom: 12 }}>
+          <button onClick={() => speak(item.English)} style={{ ...S.btn, flex: 1, background: C.pill, color: C.primary, fontSize: 13 }}>🔊 듣기</button>
+          <button onClick={startRepeat} disabled={isListening} style={{ ...S.btn, flex: 1, background: isListening ? C.border : "#FEF3C7", color: "#92400E", fontSize: 13, opacity: isListening ? 0.6 : 1 }}>
+            {isListening ? "🎤 듣고 있어요..." : "🎤 Speaking"}
+          </button>
+        </div>
         {feedback && (
           <div style={{ marginTop: 10, fontSize: 14, fontWeight: 700, color: feedback === "good" ? C.success : C.warn }}>
             {feedback === "good" ? "✅ 잘 했어요!" : "🔄 다시 해봐요!"}
           </div>
         )}
         {repeatCount > 0 && (
-          <div style={{ marginTop: 6, fontSize: 12, color: C.sub }}>따라 말하기 {repeatCount}회 완료</div>
+          <div style={{ marginTop: 6, fontSize: 12, color: C.sub }}>Speaking {repeatCount}회 완료</div>
         )}
       </div>
       <div style={{ display: "flex", gap: 12 }}>
         <button onClick={() => setPreviewIdx(p => Math.max(0, p - 1))} disabled={previewIdx === 0} style={{ ...S.btn, flex: 1, background: C.border, color: C.text, opacity: previewIdx === 0 ? 0.4 : 1 }}>← 이전</button>
         {previewIdx < lessonItems.length - 1 ? (
           <button
-            onClick={() => { const next = previewIdx + 1; setPreviewIdx(next); setTimeout(() => speak(lessonItems[next]?.English || ""), 3000); }}
+            onClick={() => { setPreviewIdx(p => p + 1); }}
             disabled={repeatCount < 3}
             style={{ ...S.btn, flex: 1, background: repeatCount >= 3 ? C.primary : C.border, color: repeatCount >= 3 ? "#fff" : C.sub, opacity: 1 }}
           >
-            {repeatCount >= 3 ? "다음 →" : `다음 (${repeatCount}/3)`}
+            {repeatCount >= 3 ? "다음 →" : `다음 (Speaking ${repeatCount}/3)`}
           </button>
         ) : (
           <button
@@ -329,7 +332,7 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
             disabled={repeatCount < 3}
             style={{ ...S.btn, flex: 1, background: repeatCount >= 3 ? C.success : C.border, color: repeatCount >= 3 ? "#fff" : C.sub }}
           >
-            {repeatCount >= 3 ? "퀴즈 시작!" : `퀴즈 (${repeatCount}/3)`}
+            {repeatCount >= 3 ? "퀴즈 시작!" : `퀴즈 (Speaking ${repeatCount}/3)`}
           </button>
         )}
       </div>

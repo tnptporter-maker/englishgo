@@ -131,7 +131,27 @@ export default function App() {
     load();
   }, []);
 
-  const go = (s, navUpdate = {}) => { setNav(p => ({ ...p, ...navUpdate })); setScreen(s); };
+  const screenHistory = useRef(["home"]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const history = screenHistory.current;
+      if (history.length > 1) {
+        history.pop();
+        const prev = history[history.length - 1];
+        setScreen(prev);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const go = (s, navUpdate = {}) => {
+    screenHistory.current.push(s);
+    window.history.pushState(null, "", window.location.pathname);
+    setNav(p => ({ ...p, ...navUpdate }));
+    setScreen(s);
+  };
   const login = async () => { try { await signInWithPopup(auth, provider); } catch (e) { console.error(e); } };
   const logout = async () => { await signOut(auth); };
 
@@ -299,8 +319,8 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
     <>
       <div style={{ ...S.card, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", marginBottom: 16, paddingTop: 24 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 36 }}>🎤 Speaking 3회 실시</div>
-        <div style={{ color: C.sub, fontSize: 24, lineHeight: 1.8, marginBottom: 36 }}>{item.Korean}</div>
-        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, lineHeight: 1.8, marginBottom: 36 }}>{item.English}</div>
+        <div style={{ color: C.sub, fontSize: 20, lineHeight: 1.6, marginBottom: 24 }}>{item.Korean}</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 24 }}>{item.English}</div>
         <div style={{ display: "flex", gap: 10, width: "100%", marginBottom: 12 }}>
           <button onClick={() => speak(item.English)} style={{ ...S.btn, flex: 1, background: C.pill, color: C.primary, fontSize: 13 }}>🔊 듣기</button>
           <button onClick={startRepeat} disabled={isListening} style={{ ...S.btn, flex: 1, background: isListening ? C.border : "#FEF3C7", color: "#92400E", fontSize: 13, opacity: isListening ? 0.6 : 1 }}>
@@ -657,7 +677,11 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
 
   const handleQuit = () => {
     setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
-    localStorage.setItem(saveKey, String(quizIdx));
+    if (phase === "preview") {
+      localStorage.setItem(saveKey, "preview");
+    } else {
+      localStorage.setItem(saveKey, String(quizIdx));
+    }
     if (nav.fromHome) { go("home"); } else { go("lesson"); }
   };
 
@@ -677,9 +701,13 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
               setShowResume(false);
             }} style={{ ...S.btn, flex: 1, background: C.border, color: C.text }}>처음부터</button>
             <button onClick={() => {
-              const saved = parseInt(localStorage.getItem(saveKey) || "0");
-              setQuizIdx(saved);
-              setPhase("quiz");
+              const saved = localStorage.getItem(saveKey);
+              if (saved === "preview") {
+                setPhase("preview");
+              } else {
+                setQuizIdx(parseInt(saved || "0"));
+                setPhase("quiz");
+              }
               setShowResume(false);
             }} style={{ ...S.btn, flex: 1, background: C.primary, color: "#fff" }}>이어서 하기</button>
           </div>

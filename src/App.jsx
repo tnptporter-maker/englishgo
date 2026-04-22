@@ -131,7 +131,7 @@ export default function App() {
 
   const go = (s, navUpdate = {}) => { setNav(p => ({ ...p, ...navUpdate })); setScreen(s); };
   const login = async () => { try { await signInWithPopup(auth, provider); } catch (e) { console.error(e); } };
-  const logout = async () => { await signOut(auth); setProgressRaw({}); setStudyDaysRaw([]); };
+  const logout = async () => { await signOut(auth); };
 
   const reviewItems = [];
   Object.entries(progress).forEach(([itemId, prog]) => {

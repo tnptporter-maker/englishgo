@@ -216,12 +216,11 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
           </div>
         </div>
 
-        <div onClick={() => go("calendar")} style={{ ...S.card, background: "#FFD966", cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "rgba(0,0,0,0.55)" }}>🔥 학습 일수</div>
-            <div style={{ fontSize: 40, fontWeight: 800, color: "#333", lineHeight: 1 }}>{studyDays.length}<span style={{ fontSize: 18, fontWeight: 600 }}> 일</span></div>
+        <div onClick={() => go("calendar")} style={{ ...S.card, background: "#FFD966", cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 32, fontWeight: 800, color: "#333" }}>🔥 {studyDays.length}일</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(0,0,0,0.55)", marginTop: 4 }}>학습 일수</div>
           </div>
-          <div style={{ fontSize: 44, opacity: 0.25 }}>🗓️</div>
         </div>
 
         <TodayLesson go={go} lessons={lessons} sources={sources} items={items} progress={progress} />

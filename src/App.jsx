@@ -269,7 +269,7 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
   useEffect(() => {
     setRepeatCount(0);
     setFeedback(null);
-    const timer = setTimeout(() => speak(item.English), 2500);
+    const timer = setTimeout(() => speak(item.English), 1500);
     return () => clearTimeout(timer);
   }, [item.English]);
 
@@ -658,7 +658,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
   const handleQuit = () => {
     setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
     localStorage.setItem(saveKey, String(quizIdx));
-    go("lesson");
+    go("home");
   };
 
   if (!lesson) return <Center>레슨을 찾을 수 없어요</Center>;

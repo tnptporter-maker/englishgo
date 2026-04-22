@@ -679,6 +679,16 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
     setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
     if (phase === "preview") {
       localStorage.setItem(saveKey, "preview");
+      // 연습하기에서 그만두면 첫번째 아이템이라도 학습 기록 남기기
+      if (lessonItems.length > 0) {
+        const itemId = lessonItems[0].ItemID;
+        setProgress(prev => {
+          if (prev[itemId]) return prev;
+          const nextReviewDate = new Date();
+          nextReviewDate.setDate(nextReviewDate.getDate() + getNextReview(0));
+          return { ...prev, [itemId]: { level: 0, nextReview: nextReviewDate.toISOString().split("T")[0], history: [{ date: today(), result: "preview" }] } };
+        });
+      }
     } else {
       localStorage.setItem(saveKey, String(quizIdx));
     }

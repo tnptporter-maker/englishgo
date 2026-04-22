@@ -320,13 +320,13 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
       <div style={{ ...S.card, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", marginBottom: 16, paddingTop: 24 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 36 }}>🎤 Speaking 3회 실시</div>
         <div style={{ color: C.sub, fontSize: 20, lineHeight: 1.6, marginBottom: 24 }}>{item.Korean}</div>
-        <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 24 }}>{item.English}</div>
         <div style={{ display: "flex", gap: 10, width: "100%", marginBottom: 12 }}>
           <button onClick={() => speak(item.English)} style={{ ...S.btn, flex: 1, background: C.pill, color: C.primary, fontSize: 13 }}>🔊 듣기</button>
           <button onClick={startRepeat} disabled={isListening} style={{ ...S.btn, flex: 1, background: isListening ? C.border : "#FEF3C7", color: "#92400E", fontSize: 13, opacity: isListening ? 0.6 : 1 }}>
             {isListening ? "🎤 듣고 있어요..." : "🎤 Speaking"}
           </button>
         </div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 12, marginTop: 8 }}>{item.English}</div>
         {feedback && (
           <div style={{ marginTop: 10, fontSize: 14, fontWeight: 700, color: feedback === "good" ? C.success : C.warn }}>
             {feedback === "good" ? "✅ 잘 했어요!" : "🔄 다시 해봐요!"}

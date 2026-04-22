@@ -198,7 +198,8 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
               onClick={() => setShowMenu(p => !p)} alt="프로필" />
             {showMenu && (
               <div style={{ position: "absolute", right: 0, top: 46, background: "#fff", borderRadius: 12, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", padding: 6, minWidth: 150, zIndex: 100 }}>
-                <div onClick={logout} style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.danger }}>🚪 로그아웃</div>
+                <div style={{ padding: "10px 14px", fontSize: 12, color: C.sub, borderBottom: `1px solid ${C.border}` }}>{user.email}</div>
+              <div onClick={logout} style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.danger }}>로그아웃</div>
                 <div onClick={async () => {
                 if (window.confirm("정말 탈퇴하시겠어요? 모든 학습 데이터가 삭제됩니다.")) {
                   try {
@@ -209,7 +210,7 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
                     await user.delete();
                   }
                 }
-              }} style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.danger }}>❌ 탈퇴</div>
+              }} style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.danger }}>탈퇴</div>
               </div>
             )}
           </div>

@@ -623,6 +623,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
   const [previewIdx, setPreviewIdx] = useState(0);
   const [quizIdx, setQuizIdx] = useState(0);
   const [showResume, setShowResume] = useState(false);
+  const [resumeReady, setResumeReady] = useState(false);
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [correct, setCorrect] = useState(false);
@@ -634,6 +635,19 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
     const saved = localStorage.getItem(saveKey);
     if (saved !== null && saved !== "0" && saved !== "done") setShowResume(true);
   }, [saveKey]);
+
+  useEffect(() => {
+    if (!resumeReady) return;
+    const saved = localStorage.getItem(saveKey);
+    if (saved === "preview") {
+      setPhase("preview");
+    } else if (saved && saved !== "done") {
+      setQuizIdx(parseInt(saved || "0"));
+      setPhase("quiz");
+    }
+    setShowResume(false);
+    setResumeReady(false);
+  }, [resumeReady]);
 
   const extractYouTubeId = (url) => {
     if (!url) return null;
@@ -717,14 +731,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
               setShowResume(false);
             }} style={{ ...S.btn, flex: 1, background: C.border, color: C.text }}>처음부터</button>
             <button onClick={() => {
-              const saved = localStorage.getItem(saveKey);
-              if (saved === "preview") {
-                setPhase("preview");
-              } else {
-                setQuizIdx(parseInt(saved || "0"));
-                setPhase("quiz");
-              }
-              setShowResume(false);
+              setResumeReady(true);
             }} style={{ ...S.btn, flex: 1, background: C.primary, color: "#fff" }}>이어서 하기</button>
           </div>
         </div>

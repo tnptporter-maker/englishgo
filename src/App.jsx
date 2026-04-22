@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import duckImg from "./assets/duck.png";
 import duck2Img from "./assets/duck2.png";
+import profileImg from "./assets/profile.jpg";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAtCebZRWhwVnWfOREs1sU9BNyvQHPDtGI",
@@ -192,14 +193,23 @@ function HomeScreen({ user, logout, go, categories, sources, studyDays, reviewIt
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: C.text }}>HOME</div>
           <div style={{ position: "relative" }}>
-            <img src={user.photoURL || "https://cdn-icons-png.flaticon.com/512/1077/1077012.png"} width={38} height={38}
+            <img src={user.photoURL || profileImg} width={38} height={38}
               style={{ borderRadius: "50%", cursor: "pointer", border: `2px solid ${C.border}` }}
               onClick={() => setShowMenu(p => !p)} alt="프로필" />
             {showMenu && (
               <div style={{ position: "absolute", right: 0, top: 46, background: "#fff", borderRadius: 12, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", padding: 6, minWidth: 150, zIndex: 100 }}>
-                <div onClick={() => setShowMenu(false)} style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.text }}>✏️ 닉네임 설정</div>
                 <div onClick={logout} style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.danger }}>🚪 로그아웃</div>
-                <div style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.danger }}>❌ 탈퇴</div>
+                <div onClick={async () => {
+                if (window.confirm("정말 탈퇴하시겠어요? 모든 학습 데이터가 삭제됩니다.")) {
+                  try {
+                    localStorage.clear();
+                    await user.delete();
+                  } catch(e) {
+                    await signInWithPopup(auth, provider);
+                    await user.delete();
+                  }
+                }
+              }} style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.danger }}>❌ 탈퇴</div>
               </div>
             )}
           </div>

@@ -370,7 +370,7 @@ function ScriptLessonScreen({ go, nav, sources, lessons, items }) {
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <button onClick={() => go("scriptLesson", { sourceId: nav.sourceId })} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{lesson?.Title}</div>
+          <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.4 }}>{lesson?.Title}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={S.card}>
@@ -429,8 +429,8 @@ function TodayLesson({ go, lessons, sources, items, progress }) {
   const inProgressLesson = (() => {
     for (const lesson of lessons) {
       const key = `quak_quiz_${lesson.LessonID}_${lesson.SourceID}`;
-      const saved = parseInt(localStorage.getItem(key) || "0");
-      if (saved > 0) return { lesson, savedIdx: saved };
+      const saved = localStorage.getItem(key);
+      if (saved !== null) return { lesson, savedIdx: saved };
     }
     return null;
   })();

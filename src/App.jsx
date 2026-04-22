@@ -175,7 +175,7 @@ function LoginScreen({ login }) {
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#FFD966", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
       <img src={duckImg} width={120} height={120} alt="오리" style={{ marginBottom: 12, borderRadius: "50%" }} />
       <div style={{ fontSize: 28, fontWeight: 800, color: "#333", marginBottom: 8 }}>꽥</div>
-      <div style={{ fontSize: 14, color: "#555", marginBottom: 48, textAlign: "center" }}>구글 계정으로 로그인하고 나만의 학습을 시작하세요</div>
+      <div style={{ fontSize: 14, color: "#555", marginBottom: 48, textAlign: "center", wordBreak: "keep-all", padding: "0 8px" }}>구글 계정으로 로그인하고<br/>나만의 학습을 시작하세요</div>
       <button onClick={login} style={{ ...S.btn, background: "#fff", color: "#333", padding: "14px 28px", fontSize: 15, display: "flex", alignItems: "center", gap: 10, borderRadius: 14 }}>
         <img src="https://www.google.com/favicon.ico" width={18} height={18} alt="Google" />
         Google로 로그인

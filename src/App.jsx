@@ -357,7 +357,7 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
             disabled={repeatCount < 3}
             style={{ ...S.btn, flex: 1, background: repeatCount >= 3 ? C.success : C.border, color: repeatCount >= 3 ? "#fff" : C.sub }}
           >
-            {repeatCount >= 3 ? "퀴즈 시작!" : `퀴즈 (Speaking ${repeatCount}/3)`}
+            {repeatCount >= 3 ? "퀴즈 시작!" : `연습 (Speaking ${repeatCount}/3)`}
           </button>
         )}
       </div>

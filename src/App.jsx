@@ -70,8 +70,8 @@ const S = {
   btn: { borderRadius: 10, padding: "11px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", border: "none", transition: "opacity .15s" },
   input: { width: "100%", borderRadius: 10, border: `1.5px solid ${C.border}`, padding: "11px 14px", fontSize: 14, outline: "none", boxSizing: "border-box", background: "#fff", color: "#111827" },
   label: { fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 8, letterSpacing: 0.3 },
-  listTitle: { fontWeight: 600, color: C.text, fontSize: 14, textAlign: "left" },
-  listSub: { fontSize: 12, color: C.sub, marginTop: 3, textAlign: "left" },
+  listTitle: { fontWeight: 700, color: C.text, fontSize: 16, textAlign: "left" },
+  listSub: { fontSize: 13, color: C.sub, marginTop: 3, textAlign: "left" },
   page: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif", overflowY: "auto" },
   pageInner: { flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" },
 };

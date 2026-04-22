@@ -430,7 +430,7 @@ function TodayLesson({ go, lessons, sources, items, progress }) {
     for (const lesson of lessons) {
       const key = `quak_quiz_${lesson.LessonID}_${lesson.SourceID}`;
       const saved = localStorage.getItem(key);
-      if (saved !== null) return { lesson, savedIdx: saved };
+      if (saved !== null && saved !== "0") return { lesson, savedIdx: saved };
     }
     return null;
   })();

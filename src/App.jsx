@@ -71,7 +71,7 @@ const S = {
   card: { background: C.card, borderRadius: 16, padding: "16px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" },
   btn: { borderRadius: 10, padding: "11px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", border: "none", transition: "opacity .15s" },
   input: { width: "100%", borderRadius: 10, border: `1.5px solid ${C.border}`, padding: "11px 14px", fontSize: 14, outline: "none", boxSizing: "border-box", background: "#fff", color: "#111827" },
-  label: { fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 8, letterSpacing: 0.3 },
+  label: { fontSize: 14, fontWeight: 700, color: C.sub, marginBottom: 8, letterSpacing: 0.3 },
   listTitle: { fontWeight: 700, color: C.text, fontSize: 16, textAlign: "left" },
   listSub: { fontSize: 13, color: C.sub, marginTop: 3, textAlign: "left" },
   page: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif", overflowY: "auto" },
@@ -535,7 +535,7 @@ function SourceScreen({ go, nav, categories, sources, lessons }) {
             );
           })}
         </div>
-        <div style={S.label}>Script</div>
+        <div style={{ ...S.label, color: C.primary }}>Script</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {catSources.map(src => {
             const srcLessons = lessons.filter(l => l.SourceID === src.SourceID);

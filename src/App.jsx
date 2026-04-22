@@ -452,7 +452,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
 
   if (done) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
-      <img src={duck2Img} width={120} height={120} alt="완료" style={{ marginBottom: 24, objectFit: "contain" }} />
+      <img src={duck2Img} width={120} height={120} alt="완료" style={{ marginBottom: 24, objectFit: "contain", display: "block", margin: "0 auto 24px" }} />
       <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>레슨 완료!</div>
       <div style={{ color: C.sub, fontSize: 14, marginBottom: 32 }}>{lessonItems.length}문장 학습했어요</div>
       <button onClick={() => go("lesson")} style={{ ...S.btn, background: C.primary, color: "#fff", width: "100%", maxWidth: 320, padding: 16, fontSize: 15 }}>← 레슨 목록으로</button>

@@ -292,7 +292,7 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
       r.start();
       recRef.current = r;
       setIsListening(true);
-    }, 2000);
+    }, 300);
   };
 
   return (
@@ -455,7 +455,7 @@ function TodayLesson({ go, lessons, sources, items, progress }) {
       <div onClick={() => {
   const src = sources.find(s => s.SourceID === nextLesson.SourceID);
   const cat = src ? src.CategoryID : null;
-  go("study", { lessonId: nextLesson.LessonID, sourceId: nextLesson.SourceID, catId: cat });
+  go("study", { lessonId: nextLesson.LessonID, sourceId: nextLesson.SourceID, catId: cat, fromHome: true });
 }}
         style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, borderLeft: `4px solid ${C.primary}` }}>
         <div style={{ flex: 1 }}>
@@ -658,7 +658,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
   const handleQuit = () => {
     setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
     localStorage.setItem(saveKey, String(quizIdx));
-    go("home");
+    if (nav.fromHome) { go("home"); } else { go("lesson"); }
   };
 
   if (!lesson) return <Center>레슨을 찾을 수 없어요</Center>;

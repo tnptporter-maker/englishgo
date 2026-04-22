@@ -269,7 +269,7 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
   useEffect(() => {
     setRepeatCount(0);
     setFeedback(null);
-    const timer = setTimeout(() => speak(item.English), 800);
+    const timer = setTimeout(() => speak(item.English), 2500);
     return () => clearTimeout(timer);
   }, [item.English]);
 
@@ -299,8 +299,8 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
     <>
       <div style={{ ...S.card, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 12 }}>🎤 Speaking 3회 실시</div>
-        <div style={{ color: C.sub, fontSize: 17, marginBottom: 12 }}>{item.Korean}</div>
-        <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 20 }}>{item.English}</div>
+        <div style={{ color: C.sub, fontSize: 20, marginBottom: 14 }}>{item.Korean}</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 20 }}>{item.English}</div>
         <div style={{ display: "flex", gap: 10, width: "100%", marginBottom: 12 }}>
           <button onClick={() => speak(item.English)} style={{ ...S.btn, flex: 1, background: C.pill, color: C.primary, fontSize: 13 }}>🔊 듣기</button>
           <button onClick={startRepeat} disabled={isListening} style={{ ...S.btn, flex: 1, background: isListening ? C.border : "#FEF3C7", color: "#92400E", fontSize: 13, opacity: isListening ? 0.6 : 1 }}>

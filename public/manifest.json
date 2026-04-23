@@ -1,0 +1,22 @@
+{
+  "name": "꽥",
+  "short_name": "꽥",
+  "description": "영어 학습 앱",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFD966",
+  "theme_color": "#FFD966",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/duck.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/duck.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

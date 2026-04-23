@@ -74,7 +74,7 @@ const S = {
   label: { fontSize: 14, fontWeight: 700, color: C.sub, marginBottom: 8, letterSpacing: 0.3 },
   listTitle: { fontWeight: 700, color: C.text, fontSize: 16, textAlign: "left" },
   listSub: { fontSize: 13, color: C.sub, marginTop: 3, textAlign: "left" },
-  page: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif", overflowY: "auto" },
+  page: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif", overflowY: "auto", userSelect: "none", WebkitUserSelect: "none" },
   pageInner: { flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" },
 };
 

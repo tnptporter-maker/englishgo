@@ -308,7 +308,7 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
         setIsListening(false);
       };
       r.onerror = () => setIsListening(false);
-      r.onend = () => setIsListening(false);
+      r.continuous = true;
       r.start();
       recRef.current = r;
       setIsListening(true);
@@ -710,7 +710,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
         });
       }
     } else {
-      localStorage.setItem(saveKey, String(quizIdx));
+      localStorage.setItem(saveKey, quizIdx > 0 ? String(quizIdx) : "preview");
     }
     if (nav.fromHome) { go("home"); } else { go("lesson"); }
   };

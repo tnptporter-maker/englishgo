@@ -660,8 +660,8 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { alert("Chrome을 사용해주세요."); return; }
     const r = new SR();
-    r.lang = "en-US"; r.continuous = false; r.interimResults = false;
-    r.onresult = e => { setAnswer(e.results[0][0].transcript); setListening(false); };
+    r.lang = "en-US"; r.continuous = true; r.interimResults = false;
+    r.onresult = e => {const transcript = e.results[e.results.length - 1][0].transcript; setAnswer(transcript);};
     r.onerror = () => setListening(false);
     r.onend = () => setListening(false);
     r.start(); recRef.current = r; setListening(true);

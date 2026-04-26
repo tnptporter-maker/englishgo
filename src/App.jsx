@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import duckImg from "./assets/duck.png";
 import duck2Img from "./assets/duck2.png";
 import profileImg from "./assets/profile.jpg";
@@ -17,11 +18,34 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const provider = new GoogleAuthProvider();
+const db = getFirestore(firebaseApp);
 
 const SHEET_ID = "1njMTapDCnpFP4mj6U0EEHPGumHfbBVWrljrX99_zUg0";
 const REVIEW_INTERVALS = [1, 3, 7, 14, 30, 90];
 const getNextReview = (level) => REVIEW_INTERVALS[Math.min(level, REVIEW_INTERVALS.length - 1)];
 const today = () => new Date().toISOString().split("T")[0];
+
+// Firestore 사용자 문서 참조
+const userDocRef = (uid) => doc(db, "users", uid);
+
+// Firestore에서 데이터 로드
+async function loadFromFirestore(uid) {
+  try {
+    const snap = await getDoc(userDocRef(uid));
+    if (snap.exists()) {
+      const data = snap.data();
+      return {
+        progress: data.progress || {},
+        studyDays: data.studyDays || [],
+        quizProgress: data.quizProgress || {},
+      };
+    }
+    return { progress: {}, studyDays: [], quizProgress: {} };
+  } catch (e) {
+    console.error("Firestore load error:", e);
+    return { progress: {}, studyDays: [], quizProgress: {} };
+  }
+}
 
 async function fetchSheet(sheetName) {
   try {
@@ -88,37 +112,87 @@ export default function App() {
   const [lessons, setLessons] = useState([]);
   const [items, setItems] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [fsLoading, setFsLoading] = useState(false);
 
-  const getProgressKey = (u) => `quak_progress_${u?.email || "guest"}`;
-  const loadProgress = (u) => { try { return JSON.parse(localStorage.getItem(getProgressKey(u)) || "{}"); } catch { return {}; } };
+  // 학습 데이터 state
   const [progress, setProgressRaw] = useState({});
+  const [studyDays, setStudyDaysRaw] = useState([]);
+  const [quizProgress, setQuizProgressRaw] = useState({});
+
+  // Firestore 디바운스 저장용 타이머
+  const saveTimer = useRef(null);
+  const pendingSave = useRef({});
+
+  // Firestore에 배치 저장 (1초 디바운스)
+  const saveToFirestore = useCallback((uid, patch) => {
+    if (!uid) return;
+    pendingSave.current = { ...pendingSave.current, ...patch };
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        const ref = userDocRef(uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          await updateDoc(ref, pendingSave.current);
+        } else {
+          await setDoc(ref, pendingSave.current);
+        }
+        pendingSave.current = {};
+      } catch (e) {
+        console.error("Firestore save error:", e);
+      }
+    }, 1000);
+  }, []);
+
+  // progress 저장
   const setProgress = useCallback((updater) => {
     setProgressRaw(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      localStorage.setItem(getProgressKey(user), JSON.stringify(next));
+      if (user?.uid) saveToFirestore(user.uid, { progress: next });
       return next;
     });
-  }, [user]);
+  }, [user, saveToFirestore]);
 
-  const getStudyDaysKey = (u) => `quak_studydays_${u?.email || "guest"}`;
-  const loadStudyDays = (u) => { try { return JSON.parse(localStorage.getItem(getStudyDaysKey(u)) || "[]"); } catch { return []; } };
-  const [studyDays, setStudyDaysRaw] = useState([]);
+  // studyDays 저장
   const setStudyDays = useCallback((updater) => {
     setStudyDaysRaw(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      localStorage.setItem(getStudyDaysKey(user), JSON.stringify(next));
+      if (user?.uid) saveToFirestore(user.uid, { studyDays: next });
       return next;
     });
-  }, [user]);
+  }, [user, saveToFirestore]);
 
+  // quizProgress 저장
+  const setQuizProgress = useCallback((updater) => {
+    setQuizProgressRaw(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      if (user?.uid) saveToFirestore(user.uid, { quizProgress: next });
+      return next;
+    });
+  }, [user, saveToFirestore]);
+
+  // 로그인 상태 감지 + Firestore 로드
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u); setAuthLoading(false);
-      if (u) { setProgressRaw(loadProgress(u)); setStudyDaysRaw(loadStudyDays(u)); }
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u) {
+        setFsLoading(true);
+        const data = await loadFromFirestore(u.uid);
+        setProgressRaw(data.progress);
+        setStudyDaysRaw(data.studyDays);
+        setQuizProgressRaw(data.quizProgress);
+        setFsLoading(false);
+      } else {
+        setProgressRaw({});
+        setStudyDaysRaw([]);
+        setQuizProgressRaw({});
+      }
+      setAuthLoading(false);
     });
     return unsub;
   }, []);
 
+  // 구글시트 데이터 로드
   useEffect(() => {
     async function load() {
       setDataLoading(true);
@@ -166,11 +240,11 @@ export default function App() {
     }
   });
 
-  if (authLoading) return <Center>로딩 중...</Center>;
+  if (authLoading || fsLoading) return <Center>{authLoading ? "로딩 중..." : "학습 데이터 불러오는 중..."}</Center>;
   if (!user) return <LoginScreen login={login} />;
   if (dataLoading) return <Center>데이터 불러오는 중...</Center>;
 
-  const shared = { user, logout, go, nav, categories, sources, lessons, items, progress, setProgress, studyDays, setStudyDays, reviewItems };
+  const shared = { user, logout, go, nav, categories, sources, lessons, items, progress, setProgress, studyDays, setStudyDays, reviewItems, quizProgress, setQuizProgress };
 
   return (
     <>
@@ -208,7 +282,7 @@ function LoginScreen({ login }) {
   );
 }
 
-function HomeScreen({ user, logout, go, categories, sources, lessons, items, progress, studyDays, reviewItems }) {
+function HomeScreen({ user, logout, go, categories, sources, lessons, items, progress, studyDays, reviewItems, quizProgress }) {
   const [showMenu, setShowMenu] = useState(false);
   const getCatSources = (catId) => sources.filter(s => s.CategoryID === catId);
   return (
@@ -223,18 +297,17 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
             {showMenu && (
               <div style={{ position: "absolute", right: 0, top: 46, background: "#fff", borderRadius: 12, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", padding: 6, minWidth: 150, zIndex: 100 }}>
                 <div style={{ padding: "10px 14px", fontSize: 12, color: C.sub, borderBottom: `1px solid ${C.border}` }}>{user.email}</div>
-              <div onClick={logout} style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.danger }}>로그아웃</div>
+                <div onClick={logout} style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.danger }}>로그아웃</div>
                 <div onClick={async () => {
-                if (window.confirm("정말 탈퇴하시겠어요? 모든 학습 데이터가 삭제됩니다.")) {
-                  try {
-                    localStorage.clear();
-                    await user.delete();
-                  } catch(e) {
-                    await signInWithPopup(auth, provider);
-                    await user.delete();
+                  if (window.confirm("정말 탈퇴하시겠어요? 모든 학습 데이터가 삭제됩니다.")) {
+                    try {
+                      await user.delete();
+                    } catch(e) {
+                      await signInWithPopup(auth, provider);
+                      await user.delete();
+                    }
                   }
-                }
-              }} style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.danger }}>탈퇴</div>
+                }} style={{ padding: "10px 14px", cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.danger }}>탈퇴</div>
               </div>
             )}
           </div>
@@ -247,7 +320,7 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
           <div style={{ fontSize: 28, opacity: 0.4 }}>🗓️</div>
         </div>
 
-        <TodayLesson go={go} lessons={lessons} sources={sources} items={items} progress={progress} />
+        <TodayLesson go={go} lessons={lessons} sources={sources} items={items} progress={progress} quizProgress={quizProgress} />
 
         <div style={{ marginBottom: 16 }}>
           <div style={S.label}>복습</div>
@@ -280,6 +353,7 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
     </div>
   );
 }
+
 function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase }) {
   const [repeatCount, setRepeatCount] = useState(0);
   const [isListening, setIsListening] = useState(false);
@@ -298,17 +372,16 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
     if (!SR) { alert("Chrome을 사용해주세요."); return; }
     setTimeout(() => {
       const r = new SR();
-      r.lang = "en-US"; r.continuous = false; r.interimResults = false;
+      r.lang = "en-US"; r.continuous = true; r.interimResults = false;
       r.onresult = e => {
-        const said = e.results[0][0].transcript.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+        const said = e.results[e.results.length - 1][0].transcript.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+        if (!said) return;
         const expected = item.English.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
         const isGood = said === expected || said.includes(expected.split(" ").slice(0, 3).join(" "));
         setFeedback(isGood ? "good" : "try");
         setRepeatCount(p => p + 1);
-        setIsListening(false);
       };
       r.onerror = () => setIsListening(false);
-      r.continuous = true;
       r.start();
       recRef.current = r;
       setIsListening(true);
@@ -322,7 +395,7 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
         <div style={{ color: C.sub, fontSize: 20, lineHeight: 1.6, marginBottom: 24 }}>{item.Korean}</div>
         <div style={{ display: "flex", gap: 10, width: "100%", marginBottom: 12 }}>
           <button onClick={() => speak(item.English)} style={{ ...S.btn, flex: 1, background: C.pill, color: C.primary, fontSize: 13 }}>🔊 듣기</button>
-          <button onClick={startRepeat} disabled={isListening} style={{ ...S.btn, flex: 1, background: isListening ? "#FEF3C7" : "#FEF3C7", color: "#92400E", fontSize: 13, opacity: isListening ? 0.6 : 1 }}>
+          <button onClick={startRepeat} disabled={isListening} style={{ ...S.btn, flex: 1, background: "#FEF3C7", color: "#92400E", fontSize: 13, opacity: isListening ? 0.6 : 1 }}>
             🎤 Speaking
           </button>
           {isListening && (
@@ -347,7 +420,7 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
           <button
             onClick={() => { setPreviewIdx(p => p + 1); }}
             disabled={repeatCount < 3}
-            style={{ ...S.btn, flex: 1, background: repeatCount >= 3 ? C.primary : C.border, color: repeatCount >= 3 ? "#fff" : C.sub, opacity: 1 }}
+            style={{ ...S.btn, flex: 1, background: repeatCount >= 3 ? C.primary : C.border, color: repeatCount >= 3 ? "#fff" : C.sub }}
           >
             {repeatCount >= 3 ? "다음 →" : `다음 (Speaking ${repeatCount}/3)`}
           </button>
@@ -364,8 +437,8 @@ function PreviewCard({ item, previewIdx, lessonItems, setPreviewIdx, setPhase })
     </>
   );
 }
+
 function ScriptLessonScreen({ go, nav, sources, lessons, items }) {
-  const src = sources.find(s => s.SourceID === nav.sourceId);
   const srcLessons = lessons.filter(l => l.SourceID === nav.sourceId).sort((a, b) => Number(a.Order) - Number(b.Order));
   const lesson = srcLessons.find(l => l.LessonID === nav.lessonId);
   const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
@@ -429,15 +502,16 @@ function ScriptLessonListScreen({ go, nav, sources, lessons, items }) {
   );
 }
 
-function TodayLesson({ go, lessons, sources, items, progress }) {
-  // 그만하기한 레슨 확인
+function TodayLesson({ go, lessons, sources, items, progress, quizProgress }) {
+  // quizProgress에서 진행중인 레슨 찾기 (Firestore 기반)
   const inProgressLesson = (() => {
     for (const lesson of lessons) {
-      const key = `quak_quiz_${lesson.LessonID}_${lesson.SourceID}`;
-      const saved = localStorage.getItem(key);
-      if (saved !== null && saved !== "0" && saved !== "done") return { lesson, savedIdx: saved };
+      const key = `${lesson.LessonID}_${lesson.SourceID}`;
+      const saved = quizProgress[key];
+      if (saved !== undefined && saved !== null && saved !== "done") {
+        return { lesson, savedIdx: saved };
+      }
     }
-    // localStorage에 없어도 마지막으로 학습한 레슨 확인
     return null;
   })();
 
@@ -479,10 +553,10 @@ function TodayLesson({ go, lessons, sources, items, progress }) {
     <div style={{ marginBottom: 16 }}>
       <div style={S.label}>오늘의 레슨</div>
       <div onClick={() => {
-  const src = sources.find(s => s.SourceID === nextLesson.SourceID);
-  const cat = src ? src.CategoryID : null;
-  go("study", { lessonId: nextLesson.LessonID, sourceId: nextLesson.SourceID, catId: cat, fromHome: true });
-}}
+        const src = sources.find(s => s.SourceID === nextLesson.SourceID);
+        const cat = src ? src.CategoryID : null;
+        go("study", { lessonId: nextLesson.LessonID, sourceId: nextLesson.SourceID, catId: cat, fromHome: true });
+      }}
         style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, borderLeft: `4px solid ${C.primary}` }}>
         <div style={{ flex: 1 }}>
           <div style={S.listTitle}>{nextLesson.Title}</div>
@@ -614,10 +688,11 @@ function LessonScreen({ go, nav, sources, lessons, items, progress }) {
   );
 }
 
-function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyDays }) {
+function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyDays, quizProgress, setQuizProgress }) {
   const lesson = lessons.find(l => l.LessonID === nav.lessonId && l.SourceID === nav.sourceId);
   const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
-  const saveKey = `quak_quiz_${nav.lessonId}_${nav.sourceId}`;
+  // saveKey: Firestore quizProgress의 키 (localStorage 키와 다름)
+  const saveKey = `${nav.lessonId}_${nav.sourceId}`;
 
   const [phase, setPhase] = useState("preview");
   const [previewIdx, setPreviewIdx] = useState(0);
@@ -631,14 +706,17 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
   const [done, setDone] = useState(false);
   const recRef = useRef(null);
 
+  // quizProgress가 로드된 후 이어서 학습 팝업 표시
   useEffect(() => {
-    const saved = localStorage.getItem(saveKey);
-    if (saved !== null && saved !== "0" && saved !== "done") setShowResume(true);
-  }, [saveKey]);
+    const saved = quizProgress[saveKey];
+    if (saved !== undefined && saved !== null && saved !== "done") {
+      setShowResume(true);
+    }
+  }, [saveKey, quizProgress]);
 
   useEffect(() => {
     if (!resumeReady) return;
-    const saved = localStorage.getItem(saveKey);
+    const saved = quizProgress[saveKey];
     if (saved === "preview") {
       setPhase("preview");
     } else if (saved && saved !== "done") {
@@ -685,11 +763,12 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
     });
     setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
     if (quizIdx + 1 >= lessonItems.length) {
-      localStorage.setItem(saveKey, "done");
+      // 레슨 완료 → quizProgress에서 키 삭제 (done으로 표시)
+      setQuizProgress(prev => ({ ...prev, [saveKey]: "done" }));
       setDone(true);
     } else {
       const nextIdx = quizIdx + 1;
-      localStorage.setItem(saveKey, String(nextIdx));
+      setQuizProgress(prev => ({ ...prev, [saveKey]: String(nextIdx) }));
       setQuizIdx(nextIdx); setAnswer(""); setSubmitted(false); setCorrect(false);
       setTimeout(() => speak(lessonItems[nextIdx]?.English || ""), 400);
     }
@@ -698,8 +777,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
   const handleQuit = () => {
     setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
     if (phase === "preview") {
-      localStorage.setItem(saveKey, "preview");
-      // 연습하기에서 그만두면 첫번째 아이템이라도 학습 기록 남기기
+      setQuizProgress(prev => ({ ...prev, [saveKey]: "preview" }));
       if (lessonItems.length > 0) {
         const itemId = lessonItems[0].ItemID;
         setProgress(prev => {
@@ -710,7 +788,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
         });
       }
     } else {
-      localStorage.setItem(saveKey, quizIdx > 0 ? String(quizIdx) : "preview");
+      setQuizProgress(prev => ({ ...prev, [saveKey]: quizIdx > 0 ? String(quizIdx) : "preview" }));
     }
     if (nav.fromHome) { go("home"); } else { go("lesson"); }
   };
@@ -727,12 +805,10 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
           <div style={{ fontSize: 14, color: C.sub, marginBottom: 24 }}>이전에 학습하던 내용이 있어요!</div>
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => {
-              localStorage.removeItem(saveKey);
+              setQuizProgress(prev => { const next = { ...prev }; delete next[saveKey]; return next; });
               setShowResume(false);
             }} style={{ ...S.btn, flex: 1, background: C.border, color: C.text }}>처음부터</button>
-            <button onClick={() => {
-              setResumeReady(true);
-            }} style={{ ...S.btn, flex: 1, background: C.primary, color: "#fff" }}>이어서 하기</button>
+            <button onClick={() => { setResumeReady(true); }} style={{ ...S.btn, flex: 1, background: C.primary, color: "#fff" }}>이어서 하기</button>
           </div>
         </div>
       </div>
@@ -754,7 +830,6 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
     return (
       <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
-          {/* Header */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <button onClick={() => go("lesson")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
             <div style={{ fontWeight: 600, fontSize: 13, color: C.sub, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson.Title}</div>
@@ -773,7 +848,6 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
               <div style={{ fontSize: 12, color: C.sub, textAlign: "center", marginBottom: 12 }}>
                 연습하기 {ytId ? previewIdx : previewIdx + 1} / {lessonItems.length}
               </div>
-              {/* 카드 */}
               <PreviewCard
                 item={item}
                 previewIdx={previewIdx}
@@ -793,7 +867,6 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
-        {/* Progress bar */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>문제 {quizIdx + 1}/{lessonItems.length}</div>
@@ -807,13 +880,11 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
 
         {!submitted ? (
           <>
-            {/* 문제 카드 */}
             <div style={{ ...S.card, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", marginBottom: 16 }}>
               <div style={{ color: C.sub, fontSize: 11, marginBottom: 10, fontWeight: 600 }}>다음을 영어로 말해보세요</div>
               <div style={{ fontSize: 18, fontWeight: 800, color: C.text, lineHeight: 1.5, marginBottom: 16 }}>{item.Korean}</div>
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13 }}>🔊 정답 듣기</button>
             </div>
-            {/* 입력 */}
             <div style={{ position: "relative", marginBottom: 12 }}>
               <input value={answer} onChange={e => setAnswer(e.target.value)} onKeyDown={e => e.key === "Enter" && answer.trim() && checkAnswer()} placeholder="영어로 입력하거나 마이크를 누르세요..." style={{ ...S.input, paddingRight: 50 }} />
               <button onClick={listening ? () => { recRef.current?.stop(); setListening(false); } : startMic} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 20, cursor: "pointer", color: listening ? C.danger : C.primary }}>
@@ -825,14 +896,13 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
           </>
         ) : (
           <>
-            {/* 정답 카드 */}
             <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.success : C.danger}`, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-              <div style={{ fontSize: 56, marginBottom: 20, filter: correct ? "invert(59%) sepia(52%) saturate(400%) hue-rotate(95deg) brightness(95%) contrast(90%)" : "none" }}>{correct ? "⭕" : "❌"}</div>
+              <div style={{ fontSize: 56, marginBottom: 20 }}>{correct ? "⭕" : "❌"}</div>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.5, marginBottom: 8 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 12 }}>내 답: {answer}</div>}
             </div>
             <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 14 }}>다음에 다시 학습하기</button>
+              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 13 }}>다음에 다시</button>
               <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: "#DCFCE7", color: C.success, fontSize: 14 }}>다음</button>
             </div>
           </>
@@ -872,8 +942,7 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
   const checkAnswer = () => {
     const expected = item.English.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
     const given = answer.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
-    const isCorrect = expected === given;
-    setCorrect(isCorrect); setSubmitted(true); speak(item.English);
+    setCorrect(expected === given); setSubmitted(true); speak(item.English);
   };
 
   const recordResult = (ox) => {
@@ -918,12 +987,12 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
         ) : (
           <>
             <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.success : C.danger}`, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-              <div style={{ fontSize: 56, marginBottom: 20, filter: correct ? "invert(59%) sepia(52%) saturate(400%) hue-rotate(95deg) brightness(95%) contrast(90%)" : "none" }}>{correct ? "⭕" : "❌"}</div>
+              <div style={{ fontSize: 56, marginBottom: 20 }}>{correct ? "⭕" : "❌"}</div>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.5 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 12, marginTop: 8 }}>내 답: {answer}</div>}
             </div>
             <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 14 }}>다음에 다시 학습하기</button>
+              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 13 }}>다음에 다시</button>
               <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: "#DCFCE7", color: C.success, fontSize: 14 }}>다음</button>
             </div>
           </>

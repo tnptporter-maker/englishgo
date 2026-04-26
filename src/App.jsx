@@ -278,7 +278,7 @@ function LoginScreen({ login }) {
       <div style={{ fontSize: 14, color: "#555", marginBottom: 48, textAlign: "center", wordBreak: "keep-all", padding: "0 8px" }}>구글 계정으로 로그인하고<br/>나만의 학습을 시작하세요</div>
       <button onClick={login} style={{ ...S.btn, background: "#fff", color: "#333", padding: "14px 28px", fontSize: 15, display: "flex", alignItems: "center", gap: 10, borderRadius: 14 }}>
         <img src="https://www.google.com/favicon.ico" width={18} height={18} alt="Google" />
-        Google로 로그인
+        Google 로그인
       </button>
     </div>
   );

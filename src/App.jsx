@@ -533,7 +533,7 @@ function LessonScreen({ go, nav, sources, lessons, items, progress }) {
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.4 }}>{src?.Name}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{src?.Name}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {srcLessons.map(lesson => {
@@ -1013,7 +1013,7 @@ function ScriptLessonListScreen({ go, nav, sources, lessons, items }) {
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.4 }}>{src?.Name}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{src?.Name}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {srcLessons.map(lesson => {

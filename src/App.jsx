@@ -1052,22 +1052,20 @@ function ScriptLessonScreen({ go, nav, sources, lessons, items, favorites, setFa
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => go("scriptLesson", { sourceId: nav.sourceId })} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
+          <button onClick={() => go("scriptLesson", { sourceId: nav.sourceId })} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.4 }}>{lesson?.Title}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {lessonItems.map((item, i) => (
             <div key={item.ItemID} style={{ ...S.card, padding: "14px 16px" }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <button onClick={() => toggleFav(item.ItemID)}
-                    style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", padding: "2px 4px", color: favorites[item.ItemID] ? "#F59E0B" : "#D1D5DB" }}>
-                    {favorites[item.ItemID] ? "★" : "☆"}
-                  </button>
-                </div>
-                <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.6, marginBottom: 12 }}>{item.Korean}</div>
-                <div style={{ fontSize: 15, color: C.text, fontWeight: 600, lineHeight: 1.6 }}>{item.English}</div>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button onClick={() => toggleFav(item.ItemID)}
+                  style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", padding: "2px 4px", color: favorites[item.ItemID] ? "#F59E0B" : "#D1D5DB" }}>
+                  {favorites[item.ItemID] ? "★" : "☆"}
+                </button>
               </div>
+              <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.6, marginBottom: 12 }}>{item.Korean}</div>
+              <div style={{ fontSize: 15, color: C.text, fontWeight: 600, lineHeight: 1.6 }}>{item.English}</div>
               {/* 듣기 버튼 */}
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 듣기</button>
             </div>

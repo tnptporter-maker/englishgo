@@ -1059,15 +1059,14 @@ function ScriptLessonScreen({ go, nav, sources, lessons, items, favorites, setFa
           {lessonItems.map((item, i) => (
             <div key={item.ItemID} style={{ ...S.card, padding: "14px 16px" }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, color: C.sub, marginBottom: 6, lineHeight: 1.5 }}>{item.Korean}</div>
-                  <div style={{ fontSize: 15, color: C.text, fontWeight: 600, lineHeight: 1.5 }}>{item.English}</div>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+                  <button onClick={() => toggleFav(item.ItemID)}
+                    style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", padding: "2px 4px", color: favorites[item.ItemID] ? "#F59E0B" : "#D1D5DB" }}>
+                    {favorites[item.ItemID] ? "★" : "☆"}
+                  </button>
                 </div>
-                {/* 7번: ☆ 저장 버튼 */}
-                <button onClick={() => toggleFav(item.ItemID)}
-                  style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", padding: "2px 4px", color: favorites[item.ItemID] ? "#F59E0B" : "#D1D5DB", flexShrink: 0 }}>
-                  {favorites[item.ItemID] ? "★" : "☆"}
-                </button>
+                <div style={{ fontSize: 14, color: C.sub, marginBottom: 6, lineHeight: 1.5 }}>{item.Korean}</div>
+                <div style={{ fontSize: 15, color: C.text, fontWeight: 600, lineHeight: 1.5 }}>{item.English}</div>
               </div>
               {/* 듣기 버튼 */}
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 듣기</button>

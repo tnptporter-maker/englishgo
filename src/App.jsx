@@ -532,7 +532,7 @@ function LessonScreen({ go, nav, sources, lessons, items, progress }) {
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
+          <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{src?.Name}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1012,7 +1012,7 @@ function ScriptLessonListScreen({ go, nav, sources, lessons, items }) {
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 뒤로</button>
+          <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{src?.Name}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1053,12 +1053,12 @@ function ScriptLessonScreen({ go, nav, sources, lessons, items, favorites, setFa
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <button onClick={() => go("scriptLesson", { sourceId: nav.sourceId })} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.4 }}>{lesson?.Title}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {lessonItems.map((item, i) => (
             <div key={item.ItemID} style={{ ...S.card, padding: "14px 16px" }}>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", justifyContent: "flex-start" }}>
                 <button onClick={() => toggleFav(item.ItemID)}
                   style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", padding: "2px 4px", color: favorites[item.ItemID] ? "#F59E0B" : "#D1D5DB" }}>
                   {favorites[item.ItemID] ? "★" : "☆"}

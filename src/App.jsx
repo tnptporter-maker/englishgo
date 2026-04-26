@@ -854,7 +854,7 @@ function StudyScreen({ go, nav, lessons, items, progress, setProgress, setStudyD
         ) : (
           <>
             <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.success : C.danger}`, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-              <div style={{ fontSize: 56, marginBottom: 16 }}>{correct ? "⭕" : "❌"}</div>
+              <div style={{ fontSize: 56, marginBottom: 16, filter: correct ? "invert(20%) sepia(100%) saturate(700%) hue-rotate(90deg) brightness(60%)" : "none" }}>{correct ? "⭕" : "❌"}</div>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6, marginBottom: 8 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 13 }}>내 답: {answer}</div>}
               {/* 정답 듣기 버튼 (제출 후) */}
@@ -987,7 +987,7 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
         ) : (
           <>
             <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.success : C.danger}`, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-              <div style={{ fontSize: 56, marginBottom: 16 }}>{correct ? "⭕" : "❌"}</div>
+              <div style={{ fontSize: 56, marginBottom: 16, filter: correct ? "invert(20%) sepia(100%) saturate(700%) hue-rotate(90deg) brightness(60%)" : "none" }}>{correct ? "⭕" : "❌"}</div>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 13, marginTop: 8 }}>내 답: {answer}</div>}
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginTop: 12 }}>🔊 정답 듣기</button>
@@ -1153,10 +1153,11 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setFavorites, setPr
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <button onClick={() => go("home")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 홈</button>
-          <div style={{ fontWeight: 700, fontSize: 13, color: C.text }}>⭐ 저장 문장 퀴즈</div>
-          <div style={{ fontWeight: 600, fontSize: 13, color: C.sub }}>{idx + 1}/{shuffled.length}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <button onClick={() => go("home")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 홈</button>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>⭐ 저장 문장 퀴즈</div>
+          <div style={{ fontWeight: 600, fontSize: 13, color: C.sub, flexShrink: 0, marginLeft: "auto" }}>{idx + 1}/{shuffled.length}</div>
+          <button onClick={() => go("home")} style={{ ...S.btn, background: "#FEE2E2", color: C.danger, padding: "5px 12px", fontSize: 12, flexShrink: 0 }}>그만하기</button>
         </div>
 
         <div style={{ marginBottom: 12 }}>
@@ -1193,7 +1194,7 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setFavorites, setPr
         ) : (
           <>
             <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.success : C.danger}`, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-              <div style={{ fontSize: 56, marginBottom: 16 }}>{correct ? "⭕" : "❌"}</div>
+              <div style={{ fontSize: 56, marginBottom: 16, filter: correct ? "invert(20%) sepia(100%) saturate(700%) hue-rotate(90deg) brightness(60%)" : "none" }}>{correct ? "⭕" : "❌"}</div>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6, marginBottom: 8 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 13 }}>내 답: {answer}</div>}
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginTop: 12 }}>🔊 정답 듣기</button>

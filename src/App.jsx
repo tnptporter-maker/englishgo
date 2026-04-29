@@ -41,6 +41,24 @@ const speak = (text) => {
   }, 300);
 };
 
+// 1번: 유튜브 SVG 아이콘
+const YoutubeSVG = () => (
+  <svg width="26" height="18" viewBox="0 0 26 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="26" height="18" rx="4" fill="#FF0000"/>
+    <polygon points="10,4 10,14 19,9" fill="white"/>
+  </svg>
+);
+
+// 2번: 따라읽기 사람 SVG - 살색 얼굴
+const SpeakSVG = () => (
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="14" cy="9" rx="5" ry="5.5" fill="#FBBF91" stroke="#D4956A" strokeWidth="1"/>
+    <path d="M7 24c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5" fill="#FBBF91" stroke="#D4956A" strokeWidth="1"/>
+    <path d="M3 13 Q1 13 2 15.5 Q3 18 4.5 16" stroke="#9CA3AF" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+    <path d="M3 10 Q0 10 1 15 Q2 19 5 17" stroke="#9CA3AF" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+  </svg>
+);
+
 async function loadFromFirestore(uid) {
   try {
     const snap = await getDoc(userDocRef(uid));
@@ -147,7 +165,7 @@ const S = {
   label: { fontSize: 14, fontWeight: 700, color: C.sub, marginBottom: 8, letterSpacing: 0.3 },
   listTitle: { fontWeight: 700, color: C.text, fontSize: 16, textAlign: "left" },
   listSub: { fontSize: 13, color: C.sub, marginTop: 3, textAlign: "left" },
-  page: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif", overflowY: "auto", userSelect: "none", WebkitUserSelect: "none", touchAction: "pan-y" },
+  page: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif", overflowY: "auto", userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none", touchAction: "pan-y" },
   pageInner: { flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" },
   quitBtn: { borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", border: "none", background: "#FEE2E2", color: "#EF4444", flexShrink: 0 },
 };
@@ -703,14 +721,11 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   const studiedCount = lessonItems.filter(i => progress[i.ItemID]?.history?.length > 0).length;
   const quizDone = quizProgress[saveKey] === "done";
 
-  // 7번: 각 스텝 완료 여부 (영상보기는 완료 표시 없음 - 1번)
   const steps = [
-    ytId ? { id: "video", icon: "🎬", label: "영상 보기", sub: "유튜브 강의", done: false } : null,
-    { id: "read", icon: "🗣️", label: "따라읽기", sub: `${lessonItems.length}문장 × 2회`, done: lessonStepDone.read },
+    ytId ? { id: "video", icon: <YoutubeSVG />, label: "영상 보기", sub: "유튜브 강의", done: false } : null,
+    { id: "read", icon: <SpeakSVG />, label: "따라읽기", sub: `${lessonItems.length}문장 × 2회`, done: lessonStepDone.read },
     { id: "build", icon: "🧩", label: "영작하기", sub: "단어 조각으로 문장 만들기", done: lessonStepDone.build },
-    // 6번: 퀴즈 → Speaking Test
     { id: "quiz", icon: "🎤", label: "Speaking Test", sub: "직접 말해보기", done: quizDone },
-    // 8번: Diary 단계 추가
     { id: "diary", icon: "📓", label: "Diary", sub: "학습 내용으로 글쓰기 연습", done: lessonStepDone.diary },
   ].filter(Boolean);
 
@@ -720,9 +735,10 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   const handleResume = () => {
     setShowResumePopup(false);
     const saved = quizProgress[saveKey];
-    // preview면 따라읽기로, 숫자면 퀴즈로
     if (saved === "preview") {
       go("stepRead", { ...nav, fromLesson: true });
+    } else if (saved === "build") {
+      go("stepBuild", { ...nav, fromLesson: true });
     } else if (!isNaN(Number(saved))) {
       go("stepQuiz", { ...nav, fromLesson: true });
     }
@@ -736,10 +752,10 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   return (
     <div style={S.page}>
       <div style={S.pageInner}>
-        {/* 5번: 레슨명을 뒤로 버튼 옆에 */}
+        {/* 5번: 레슨명 뒤로버튼 옆 배치 */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <button onClick={() => go(backScreen)} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 15, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
         </div>
         <div style={{ ...S.card, marginBottom: 20, borderLeft: `4px solid ${C.primary}` }}>
           <div style={{ fontSize: 13, color: C.sub }}>{src?.Name} · {lessonItems.length}문장 {studiedCount > 0 ? `· ${studiedCount}개 학습됨` : ""}</div>
@@ -836,7 +852,7 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, se
   const restartTimerRef = useRef(null);
   const item = lessonItems[idx];
 
-  // 7번: 진입 시 quizProgress에 "preview" 저장 (이어하기 감지용)
+  // 진입 시 quizProgress에 "preview" 저장
   useEffect(() => {
     setQuizProgress(prev => {
       if (!prev[saveKey] || prev[saveKey] === null) {
@@ -852,8 +868,8 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, se
     setIsListening(false);
     recRef.current?.stop();
     stopSpeak();
-    const timer = setTimeout(() => speak(item?.English), 1500);
-    return () => { clearTimeout(timer); stopSpeak(); recRef.current?.stop(); };
+    // 4번: 자동 TTS 제거 (아무것도 안 함)
+    return () => { stopSpeak(); recRef.current?.stop(); };
   }, [idx, round]);
 
   useEffect(() => { return () => { stopSpeak(); recRef.current?.stop(); clearTimeout(restartTimerRef.current); }; }, []);
@@ -877,8 +893,9 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, se
             const expected = item.English.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
             const words = expected.split(" ");
             const matchRatio = words.filter(w => said.includes(w)).length / words.length;
-            setFeedback(matchRatio >= 0.6 ? "good" : "try");
-            setSpokenThisCard(true);
+            // 8번: 80% 이상 매칭 시 인정
+            setFeedback(matchRatio >= 0.8 ? "good" : "try");
+            if (matchRatio >= 0.8) setSpokenThisCard(true);
           }
         }
       };
@@ -1060,10 +1077,10 @@ function StepBuildScreen({ go, nav, items, setStudyDays, setStepDone, setQuizPro
             ))
           )}
         </div>
-        {/* 6번: 이모지 없애고 글자 크게 */}
+        {/* 정답/오답 인라인 */}
         {submitted && (
-          <div style={{ ...S.card, marginBottom: 12, padding: "24px 16px 20px", textAlign: "center", background: correct ? C.successBg : C.dangerBg, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}` }}>
-            <div style={{ fontSize: 26, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 8 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
+          <div style={{ ...S.card, marginBottom: 12, padding: "20px 16px 16px", textAlign: "center", background: correct ? C.successBg : C.dangerBg, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}` }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 8 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
             <div style={{ fontSize: 14, color: C.text, fontWeight: 600, marginBottom: 8 }}>{item?.English}</div>
             <button onClick={() => speak(item?.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px" }}>🔊 듣기</button>
           </div>
@@ -1204,51 +1221,55 @@ function StepQuizScreen({ go, nav, items, progress, setProgress, setStudyDays, q
   const item = lessonItems[quizIdx];
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
           <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
-          {/* 6번: Speaking Test */}
           <div style={{ fontSize: 13, color: C.text, fontWeight: 700, flex: 1 }}>🎤 Speaking Test {quizIdx + 1}/{lessonItems.length}</div>
           <button onClick={() => { stopSpeak(); stopMic(); go("lessonSteps"); }} style={S.quitBtn}>그만하기</button>
         </div>
-        <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 12 }}>
+        <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 14 }}>
           <div style={{ height: "100%", width: `${Math.round((quizIdx / lessonItems.length) * 100)}%`, background: C.primary, borderRadius: 99, transition: "width 0.3s" }} />
         </div>
+
+        {/* 7번: 문제 카드 */}
+        <div style={{ ...S.card, marginBottom: 12, padding: "16px", textAlign: "center" }}>
+          <div style={{ color: C.sub, fontSize: 11, marginBottom: 6, fontWeight: 600 }}>다음을 영어로 작성하세요</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{item.Korean}</div>
+          <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "6px 14px", marginTop: 10 }}>🔊 정답 듣기</button>
+        </div>
+
+        {/* 7번: 마이크 버튼을 문제카드 바로 아래로, 크게 */}
+        <div style={{ marginBottom: 12 }}>
+          {!listening ? (
+            <button onClick={startMic} style={{ ...S.btn, width: "100%", background: "#FEF3C7", color: "#92400E", fontSize: 16, padding: "14px", fontWeight: 800 }}>🎤 Speaking</button>
+          ) : (
+            <button onClick={stopMic} style={{ ...S.btn, width: "100%", background: "#FEE2E2", color: C.danger, fontSize: 16, padding: "14px", fontWeight: 800 }}>⏹ 녹음 완료</button>
+          )}
+        </div>
+        {/* 11번: "듣고 있어요" 텍스트 제거 */}
+
+        {/* 7번: 입력창 사이즈 줄임 */}
+        <textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="영어로 입력하세요..."
+          style={{ ...S.input, resize: "none", fontSize: 15, padding: "12px 14px", lineHeight: 1.6, minHeight: 72, marginBottom: 10 }} />
+
+        {/* 9번: 정답/오답 인라인 표시 (전체화면 X) */}
+        {submitted && (
+          <div style={{ ...S.card, padding: "16px", marginBottom: 10, textAlign: "center", background: correct ? C.successBg : C.dangerBg, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}` }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 8 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
+            <div style={{ fontWeight: 600, color: C.text, fontSize: 14, lineHeight: 1.5, marginBottom: 6 }}>{item.English}</div>
+            {answer && <div style={{ color: C.sub, fontSize: 12 }}>내 답: {answer}</div>}
+            <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 정답 듣기</button>
+          </div>
+        )}
+
         {!submitted ? (
-          <>
-            <div style={{ ...S.card, marginBottom: 12, padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ color: C.sub, fontSize: 11, marginBottom: 6, fontWeight: 600 }}>다음을 영어로 작성하세요</div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{item.Korean}</div>
-              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "6px 14px", marginTop: 10 }}>🔊 정답 듣기</button>
-            </div>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", marginBottom: 12 }}>
-              <textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="영어로 입력하세요..."
-                style={{ ...S.input, flex: 1, resize: "none", fontSize: 16, padding: "14px", lineHeight: 1.6, minHeight: 120 }} />
-            </div>
-            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-              {!listening ? (
-                <button onClick={startMic} style={{ ...S.btn, flex: 1, background: "#FEF3C7", color: "#92400E", fontSize: 14 }}>🎤 마이크로 입력</button>
-              ) : (
-                <button onClick={stopMic} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 14 }}>⏹ 녹음 완료</button>
-              )}
-            </div>
-            {listening && <div style={{ textAlign: "center", color: C.primary, fontSize: 13, marginBottom: 8, fontWeight: 600 }}>🎤 듣고 있어요... 말한 후 ⏹ 누르세요</div>}
-            <button onClick={checkAnswer} disabled={!answer.trim()} style={{ ...S.btn, width: "100%", background: C.primary, color: "#fff", opacity: !answer.trim() ? 0.4 : 1 }}>제출</button>
-          </>
+          <button onClick={checkAnswer} disabled={!answer.trim()} style={{ ...S.btn, width: "100%", background: C.primary, color: "#fff", padding: 13, opacity: !answer.trim() ? 0.4 : 1 }}>제출</button>
         ) : (
-          <>
-            {/* 6번: 이모지 없애고 글자 크게 */}
-            <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}`, background: correct ? C.successBg : C.dangerBg, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
-              <div style={{ fontSize: 30, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 16 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
-              <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6, marginBottom: 8 }}>{item.English}</div>
-              {answer && <div style={{ color: C.sub, fontSize: 13 }}>내 답: {answer}</div>}
-              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginTop: 16 }}>🔊 정답 듣기</button>
-            </div>
-            <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: C.dangerBg, color: C.dangerText, fontSize: 13, border: `1px solid ${C.dangerBorder}` }}>✗ 다시 학습</button>
-              <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: C.successBg, color: C.successText, fontSize: 14, border: `1px solid ${C.successBorder}` }}>✓ 다음</button>
-            </div>
-          </>
+          /* 10번: ✗✓ 제거 */
+          <div style={{ display: "flex", gap: 12 }}>
+            <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: C.dangerBg, color: C.dangerText, fontSize: 14, border: `1px solid ${C.dangerBorder}`, padding: "12px" }}>다시 학습</button>
+            <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: C.successBg, color: C.successText, fontSize: 14, border: `1px solid ${C.successBorder}`, padding: "12px" }}>다음</button>
+          </div>
         )}
       </div>
     </div>
@@ -1285,18 +1306,34 @@ function StepDiaryScreen({ go, nav, lessons, sources, diaries, setDiaries, setSt
 
   // 3번: 예쁜 공책 SVG
   const NotebookSVG = () => (
-    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="14" y="8" width="52" height="64" rx="6" fill="#FEF9C3" stroke="#FDE047" strokeWidth="2"/>
-      <rect x="14" y="8" width="12" height="64" rx="6" fill="#FDE047"/>
-      <rect x="14" y="8" width="12" height="64" rx="0" fill="#FDE047" style={{clipPath:"inset(0 0 0 6px)"}}/>
-      <circle cx="20" cy="24" r="3" fill="#fff"/>
-      <circle cx="20" cy="40" r="3" fill="#fff"/>
-      <circle cx="20" cy="56" r="3" fill="#fff"/>
-      <line x1="32" y1="28" x2="58" y2="28" stroke="#FDE047" strokeWidth="1.5" strokeLinecap="round"/>
-      <line x1="32" y1="36" x2="58" y2="36" stroke="#FDE047" strokeWidth="1.5" strokeLinecap="round"/>
-      <line x1="32" y1="44" x2="58" y2="44" stroke="#FDE047" strokeWidth="1.5" strokeLinecap="round"/>
-      <line x1="32" y1="52" x2="50" y2="52" stroke="#FDE047" strokeWidth="1.5" strokeLinecap="round"/>
-      <text x="34" y="22" fontSize="11" fill="#92400E" fontWeight="700" fontFamily="sans-serif">diary</text>
+    <svg width="90" height="90" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* 노트 본체 */}
+      <rect x="18" y="10" width="50" height="62" rx="5" fill="#4CAF82" stroke="#3A9A6E" strokeWidth="1.5"/>
+      {/* 노트 오른쪽 탭들 */}
+      <rect x="62" y="18" width="8" height="10" rx="2" fill="#FFD966"/>
+      <rect x="62" y="32" width="8" height="10" rx="2" fill="#FF8FAB"/>
+      <rect x="62" y="46" width="8" height="10" rx="2" fill="#82C4FF"/>
+      {/* 스프링 링들 */}
+      {[18,26,34,42,50,58,66].map((y, i) => (
+        <ellipse key={i} cx="21" cy={y} rx="4" ry="3" fill="none" stroke="#B0B0B0" strokeWidth="1.8"/>
+      ))}
+      {/* 노트 내지 흰 영역 */}
+      <rect x="26" y="18" width="34" height="20" rx="3" fill="white" opacity="0.9"/>
+      {/* 내지 줄 */}
+      <line x1="29" y1="24" x2="57" y2="24" stroke="#D0D0D0" strokeWidth="1.2"/>
+      <line x1="29" y1="29" x2="57" y2="29" stroke="#D0D0D0" strokeWidth="1.2"/>
+      <line x1="29" y1="34" x2="50" y2="34" stroke="#D0D0D0" strokeWidth="1.2"/>
+      {/* 오렌지 띠 */}
+      <rect x="38" y="10" width="6" height="62" rx="0" fill="#FF7043" opacity="0.7"/>
+      {/* 연필 */}
+      <rect x="52" y="52" width="9" height="32" rx="2" fill="#F9E04B" stroke="#E0C030" strokeWidth="1" transform="rotate(-35 52 52)"/>
+      <polygon points="52,77 56,77 54,84" fill="#FBBF91" transform="rotate(-35 52 52)"/>
+      <rect x="52" y="52" width="9" height="5" rx="1" fill="#E8A0A0" stroke="#C07070" strokeWidth="0.8" transform="rotate(-35 52 52)"/>
+      <rect x="53" y="57" width="7" height="3" rx="0" fill="#C0C0C0" transform="rotate(-35 52 52)"/>
+      {/* 장식 요소 */}
+      <text x="68" y="20" fontSize="10" fill="#555" fontWeight="700">+</text>
+      <rect x="14" y="62" width="6" height="6" rx="1" fill="#A78BFA" transform="rotate(20 14 62)"/>
+      <circle cx="72" cy="55" r="3.5" fill="#FFD966" opacity="0.8"/>
     </svg>
   );
 
@@ -1466,21 +1503,21 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
                 <button onClick={stopMic} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 14 }}>⏹ 녹음 완료</button>
               )}
             </div>
-            {listening && <div style={{ textAlign: "center", color: C.primary, fontSize: 13, marginBottom: 8, fontWeight: 600 }}>🎤 듣고 있어요... 말한 후 ⏹ 누르세요</div>}
+            {listening && <div style={{ textAlign: "center", color: C.primary, fontSize: 13, marginBottom: 8, fontWeight: 600 }}>🎤 녹음 중...</div>}
             <button onClick={checkAnswer} disabled={!answer.trim()} style={{ ...S.btn, width: "100%", background: C.primary, color: "#fff", opacity: !answer.trim() ? 0.4 : 1 }}>제출</button>
           </>
         ) : (
           <>
-            {/* 6번: 이모지 없애고 글자 크게 */}
-            <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}`, background: correct ? C.successBg : C.dangerBg, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
-              <div style={{ fontSize: 30, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 16 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
-              <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6 }}>{item.English}</div>
-              {answer && <div style={{ color: C.sub, fontSize: 13, marginTop: 8 }}>내 답: {answer}</div>}
-              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginTop: 16 }}>🔊 정답 듣기</button>
+            {/* 9번: 인라인 정답 표시, 10번: ✗✓ 제거 */}
+            <div style={{ ...S.card, padding: "16px", marginBottom: 12, textAlign: "center", background: correct ? C.successBg : C.dangerBg, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}` }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 8 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
+              <div style={{ fontWeight: 600, color: C.text, fontSize: 14, lineHeight: 1.5, marginBottom: 6 }}>{item.English}</div>
+              {answer && <div style={{ color: C.sub, fontSize: 12, marginTop: 4 }}>내 답: {answer}</div>}
+              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 정답 듣기</button>
             </div>
             <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: C.dangerBg, color: C.dangerText, fontSize: 13, border: `1px solid ${C.dangerBorder}` }}>✗ 다시 학습</button>
-              <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: C.successBg, color: C.successText, fontSize: 14, border: `1px solid ${C.successBorder}` }}>✓ 다음</button>
+              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: C.dangerBg, color: C.dangerText, fontSize: 14, border: `1px solid ${C.dangerBorder}`, padding: "12px" }}>다시 학습</button>
+              <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: C.successBg, color: C.successText, fontSize: 14, border: `1px solid ${C.successBorder}`, padding: "12px" }}>다음</button>
             </div>
           </>
         )}
@@ -1723,21 +1760,20 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setProgress, setStu
                 <button onClick={stopMic} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 14 }}>⏹ 녹음 완료</button>
               )}
             </div>
-            {listening && <div style={{ textAlign: "center", color: C.primary, fontSize: 13, marginBottom: 8, fontWeight: 600 }}>🎤 듣고 있어요...</div>}
+            {listening && <div style={{ textAlign: "center", color: C.primary, fontSize: 13, marginBottom: 8, fontWeight: 600 }}>🎤 녹음 중...</div>}
             <button onClick={checkAnswer} disabled={!answer.trim()} style={{ ...S.btn, width: "100%", background: C.primary, color: "#fff", opacity: !answer.trim() ? 0.4 : 1 }}>제출</button>
           </>
         ) : (
           <>
-            {/* 6번: 이모지 없애고 글자 크게 */}
-            <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}`, background: correct ? C.successBg : C.dangerBg, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
-              <div style={{ fontSize: 30, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 16 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
-              <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6, marginBottom: 8 }}>{item.English}</div>
-              {answer && <div style={{ color: C.sub, fontSize: 13 }}>내 답: {answer}</div>}
-              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginTop: 16 }}>🔊 정답 듣기</button>
+            <div style={{ ...S.card, padding: "16px", marginBottom: 12, textAlign: "center", background: correct ? C.successBg : C.dangerBg, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}` }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 8 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
+              <div style={{ fontWeight: 600, color: C.text, fontSize: 14, lineHeight: 1.5, marginBottom: 6 }}>{item.English}</div>
+              {answer && <div style={{ color: C.sub, fontSize: 12 }}>내 답: {answer}</div>}
+              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 정답 듣기</button>
             </div>
             <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => next("x")} style={{ ...S.btn, flex: 1, background: C.dangerBg, color: C.dangerText, fontSize: 13, border: `1px solid ${C.dangerBorder}` }}>✗ 다시 학습</button>
-              <button onClick={() => next("o")} style={{ ...S.btn, flex: 1, background: C.successBg, color: C.successText, fontSize: 14, border: `1px solid ${C.successBorder}` }}>✓ 다음</button>
+              <button onClick={() => next("x")} style={{ ...S.btn, flex: 1, background: C.dangerBg, color: C.dangerText, fontSize: 14, border: `1px solid ${C.dangerBorder}`, padding: "12px" }}>다시 학습</button>
+              <button onClick={() => next("o")} style={{ ...S.btn, flex: 1, background: C.successBg, color: C.successText, fontSize: 14, border: `1px solid ${C.successBorder}`, padding: "12px" }}>다음</button>
             </div>
           </>
         )}

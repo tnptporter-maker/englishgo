@@ -578,7 +578,7 @@ function CalendarScreen({ go, studyDays }) {
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => go("home")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 홈</button>
+          <button onClick={() => go("home")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px" }}>← 홈</button>
           <div style={{ fontWeight: 700, fontSize: 16 }}>학습 달력</div>
         </div>
         <div style={S.card}>
@@ -617,7 +617,7 @@ function SourceScreen({ go, nav, categories, sources, lessons }) {
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => go("home")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 홈</button>
+          <button onClick={() => go("home")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px" }}>← 홈</button>
           <div style={{ fontWeight: 700, fontSize: 16 }}>{cat?.Name}</div>
         </div>
         <div style={S.label}>교재 선택</div>
@@ -662,7 +662,7 @@ function LessonScreen({ go, nav, sources, lessons, items, progress }) {
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("source")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{src?.Name}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -747,7 +747,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
       <div style={S.pageInner}>
         {/* 5번: 레슨명 뒤로버튼 옆 배치 */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <button onClick={() => go(backScreen)} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go(backScreen)} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
         </div>
         <div style={{ ...S.card, marginBottom: 20, borderLeft: `4px solid ${C.yellow}`, background: C.yellowLight }}>
@@ -805,7 +805,7 @@ function StepVideoScreen({ go, nav, lessons, setStepDone }) {
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <button onClick={() => go("lessonSteps")} style={S.quitBtn}>그만하기</button>
         </div>
@@ -945,7 +945,7 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, se
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <div style={{ fontSize: 12, color: C.sub, flexShrink: 0 }}>{currentNum}/{totalItems}</div>
           <button onClick={() => { stopSpeak(); stopRepeat(); go("lessonSteps"); }} style={S.quitBtn}>그만하기</button>
@@ -962,7 +962,7 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, se
           <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 20 }}>{item?.English}</div>
           <div style={{ display: "flex", gap: 10, width: "100%", marginBottom: 12 }}>
             <button onClick={() => { stopRepeat(); speak(item?.English); }}
-              style={{ ...S.btn, flex: 1, background: C.pill, color: C.primary, fontSize: 13 }}>🔊 듣기</button>
+              style={{ ...S.btn, flex: 1, background: C.yellowLight, color: C.yellowDark, fontSize: 13 }}>🔊 듣기</button>
             {!isListening ? (
               <button onClick={startRepeat} style={{ ...S.btn, flex: 1, background: "#FEF3C7", color: "#92400E", fontSize: 13 }}>🎤 Speaking</button>
             ) : (
@@ -1047,7 +1047,7 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <div style={{ fontSize: 12, color: C.sub, flexShrink: 0 }}>{idx + 1}/{lessonItems.length}</div>
           <button onClick={() => go("lessonSteps")} style={S.quitBtn}>그만하기</button>
@@ -1076,7 +1076,7 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
           <div style={{ ...S.card, marginBottom: 12, padding: "20px 16px 16px", textAlign: "center", background: correct ? C.successBg : C.dangerBg, border: "none" }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 8 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
             <div style={{ fontSize: 14, color: C.text, fontWeight: 600, marginBottom: 8 }}>{item?.English}</div>
-            <button onClick={() => speak(item?.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px" }}>🔊 듣기</button>
+            <button onClick={() => speak(item?.English)} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, fontSize: 12, padding: "5px 12px" }}>🔊 듣기</button>
           </div>
         )}
         {chunks === null ? (
@@ -1209,7 +1209,7 @@ function StepQuizScreen({ go, nav, items, lessons, progress, setProgress, setStu
       <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>Speaking Test 완료!</div>
       <div style={{ color: C.sub, fontSize: 14, marginBottom: 32 }}>{lessonItems.length}문장 모두 완료했어요 🎉</div>
       <button onClick={() => go("stepDiary", nav)} style={{ ...S.btn, background: "#7C3AED", color: "#fff", width: "100%", maxWidth: 320, padding: 16, fontSize: 15, marginBottom: 12 }}>📓 Diary 쓰기 →</button>
-      <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, width: "100%", maxWidth: 320, padding: 14, fontSize: 14 }}>← 레슨으로</button>
+      <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, width: "100%", maxWidth: 320, padding: 14, fontSize: 14 }}>← 레슨으로</button>
     </div>
   );
 
@@ -1218,7 +1218,7 @@ function StepQuizScreen({ go, nav, items, lessons, progress, setProgress, setStu
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontSize: 14, color: C.text, fontWeight: 700, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <button onClick={() => { stopSpeak(); stopMic(); go("lessonSteps"); }} style={S.quitBtn}>그만하기</button>
         </div>
@@ -1230,7 +1230,7 @@ function StepQuizScreen({ go, nav, items, lessons, progress, setProgress, setStu
         <div style={{ ...S.card, marginBottom: 12, padding: "16px", textAlign: "center" }}>
           <div style={{ color: C.sub, fontSize: 11, marginBottom: 6, fontWeight: 600 }}>다음을 영어로 작성하세요</div>
           <div style={{ fontSize: 17, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{item.Korean}</div>
-          <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "6px 14px", marginTop: 10 }}>🔊 정답 듣기</button>
+          <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, fontSize: 12, padding: "6px 14px", marginTop: 10 }}>🔊 정답 듣기</button>
         </div>
 
         {/* 7번: 마이크 버튼을 문제카드 바로 아래로, 크게 */}
@@ -1253,7 +1253,7 @@ function StepQuizScreen({ go, nav, items, lessons, progress, setProgress, setStu
             <div style={{ fontSize: 22, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 8 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
             <div style={{ fontWeight: 600, color: C.text, fontSize: 14, lineHeight: 1.5, marginBottom: 6 }}>{item.English}</div>
             {answer && <div style={{ color: C.sub, fontSize: 12 }}>내 답: {answer}</div>}
-            <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 정답 듣기</button>
+            <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 정답 듣기</button>
           </div>
         )}
 
@@ -1345,7 +1345,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, diaries, setDiaries, setSt
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <button onClick={() => go("lessonSteps")} style={S.quitBtn}>건너뛰기</button>
         </div>
@@ -1466,7 +1466,7 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <button onClick={() => go("home")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px" }}>← 홈</button>
+          <button onClick={() => go("home")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px" }}>← 홈</button>
           <div style={{ fontWeight: 600, fontSize: 13, color: C.sub }}>{idx + 1} / {reviewItems.length}</div>
           <button onClick={handleQuit} style={S.quitBtn}>그만하기</button>
         </div>
@@ -1485,7 +1485,7 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
             <div style={{ ...S.card, marginBottom: 12, padding: "14px 16px", textAlign: "center" }}>
               <div style={{ color: C.sub, fontSize: 11, marginBottom: 6, fontWeight: 600 }}>영어로 작성하세요</div>
               <div style={{ fontSize: 17, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{item.Korean}</div>
-              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "6px 14px", marginTop: 10 }}>🔊 정답 듣기</button>
+              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, fontSize: 12, padding: "6px 14px", marginTop: 10 }}>🔊 정답 듣기</button>
             </div>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", marginBottom: 12 }}>
               <textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="영어로 입력하세요..."
@@ -1508,7 +1508,7 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
               <div style={{ fontSize: 22, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 8 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
               <div style={{ fontWeight: 600, color: C.text, fontSize: 14, lineHeight: 1.5, marginBottom: 6 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 12, marginTop: 4 }}>내 답: {answer}</div>}
-              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 정답 듣기</button>
+              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 정답 듣기</button>
             </div>
             <div style={{ display: "flex", gap: 12 }}>
               <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: C.dangerBg, color: C.dangerText, fontSize: 14, border: "none", padding: "12px" }}>다시 학습</button>
@@ -1529,7 +1529,7 @@ function ScriptLessonListScreen({ go, nav, sources, lessons, items }) {
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => go("source")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("source")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{src?.Name}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1563,7 +1563,7 @@ function ScriptLessonScreen({ go, nav, lessons, items, favorites, setFavorites }
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => go("scriptLesson", { sourceId: nav.sourceId })} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("scriptLesson", { sourceId: nav.sourceId })} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1577,7 +1577,7 @@ function ScriptLessonScreen({ go, nav, lessons, items, favorites, setFavorites }
               </div>
               <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.6, marginBottom: 12 }}>{item.Korean}</div>
               <div style={{ fontSize: 15, color: C.text, fontWeight: 600, lineHeight: 1.6 }}>{item.English}</div>
-              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 듣기</button>
+              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 듣기</button>
             </div>
           ))}
         </div>
@@ -1607,7 +1607,7 @@ function FavoriteListScreen({ go, items, lessons, favorites, setFavorites }) {
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => go("home")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 홈</button>
+          <button onClick={() => go("home")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 홈</button>
           <div style={{ fontWeight: 700, fontSize: 16, flex: 1, color: C.text }}>⭐ 저장한 문장</div>
           <button onClick={() => go("favoriteQuiz")} style={{ ...S.btn, background: "#F59E0B", color: "#fff", padding: "8px 14px", fontSize: 13, flexShrink: 0 }}>랜덤 QUIZ</button>
         </div>
@@ -1621,7 +1621,7 @@ function FavoriteListScreen({ go, items, lessons, favorites, setFavorites }) {
               </div>
               <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.6, marginBottom: 8 }}>{item.Korean}</div>
               <div style={{ fontSize: 15, color: C.text, fontWeight: 600, lineHeight: 1.6 }}>{item.English}</div>
-              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 듣기</button>
+              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 듣기</button>
             </div>
           ))}
         </div>
@@ -1724,7 +1724,7 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setProgress, setStu
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <button onClick={() => go("favoriteList")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 목록</button>
+          <button onClick={() => go("favoriteList")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 목록</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>⭐ 랜덤 QUIZ</div>
           <div style={{ fontWeight: 600, fontSize: 13, color: C.sub, flexShrink: 0 }}>{idx + 1}/{shuffled.length}</div>
           <button onClick={handleQuit} style={S.quitBtn}>그만하기</button>
@@ -1742,7 +1742,7 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setProgress, setStu
             <div style={{ ...S.card, marginBottom: 12, padding: "14px 16px", textAlign: "center" }}>
               <div style={{ color: C.sub, fontSize: 11, marginBottom: 6, fontWeight: 600 }}>영어로 작성하세요</div>
               <div style={{ fontSize: 17, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{item.Korean}</div>
-              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "6px 14px", marginTop: 10 }}>🔊 정답 듣기</button>
+              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, fontSize: 12, padding: "6px 14px", marginTop: 10 }}>🔊 정답 듣기</button>
             </div>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", marginBottom: 12 }}>
               <textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="영어로 입력하세요..."
@@ -1764,7 +1764,7 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setProgress, setStu
               <div style={{ fontSize: 22, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 8 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
               <div style={{ fontWeight: 600, color: C.text, fontSize: 14, lineHeight: 1.5, marginBottom: 6 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 12 }}>내 답: {answer}</div>}
-              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 정답 듣기</button>
+              <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, fontSize: 12, padding: "5px 12px", marginTop: 10 }}>🔊 정답 듣기</button>
             </div>
             <div style={{ display: "flex", gap: 12 }}>
               <button onClick={() => next("x")} style={{ ...S.btn, flex: 1, background: C.dangerBg, color: C.dangerText, fontSize: 14, border: "none", padding: "12px" }}>다시 학습</button>
@@ -1796,7 +1796,7 @@ function DiaryListScreen({ go, diaries, setDiaries }) {
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => go("home")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 홈</button>
+          <button onClick={() => go("home")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 홈</button>
           <div style={{ fontWeight: 700, fontSize: 16, flex: 1 }}>📓 내 다이어리</div>
           <div style={{ fontSize: 13, color: C.sub }}>{sorted.length}개</div>
         </div>
@@ -1831,7 +1831,7 @@ function DiaryDetailScreen({ go, nav, diaries }) {
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <button onClick={() => go("diaryList")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("diaryList")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 15, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{diary.lessonTitle}</div>
         </div>
         <div style={{ ...S.card, marginBottom: 16, borderLeft: `4px solid ${C.yellow}`, background: C.yellowLight }}>

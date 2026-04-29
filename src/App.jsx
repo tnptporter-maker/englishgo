@@ -470,7 +470,7 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
             <div style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }} onClick={() => go("favoriteList")}>
               <div style={{ flex: 1 }}>
                 <div style={S.listTitle}>⭐ 저장한 문장</div>
-                <div style={S.listSub}>{favCount}개 문장 저장됨</div>
+                <div style={S.listSub}>저장한 문장 {favCount}개</div>
               </div>
               <div style={{ color: C.sub, fontSize: 18 }}>›</div>
             </div>
@@ -1610,7 +1610,7 @@ function FavoriteListScreen({ go, items, lessons, favorites, setFavorites }) {
           <div style={{ fontWeight: 700, fontSize: 16, flex: 1, color: C.text }}>⭐ 저장한 문장</div>
           <button onClick={() => go("favoriteQuiz")} style={{ ...S.btn, background: "#F59E0B", color: "#fff", padding: "8px 14px", fontSize: 13, flexShrink: 0 }}>랜덤 QUIZ</button>
         </div>
-        <div style={{ fontSize: 13, color: C.sub, marginBottom: 12 }}>{favItems.length}개 문장 저장됨</div>
+        <div style={{ fontSize: 13, color: C.sub, marginBottom: 12 }}>저장한 문장 {favItems.length}개</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {favItems.map((item) => (
             <div key={item.ItemID} style={{ ...S.card, padding: "14px 16px" }}>

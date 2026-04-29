@@ -450,19 +450,6 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
           )}
         </div>
 
-        {favCount > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={S.label}>저장한 문장</div>
-            <div style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }} onClick={() => go("favoriteList")}>
-              <div style={{ flex: 1 }}>
-                <div style={S.listTitle}>⭐ 저장한 문장</div>
-                <div style={S.listSub}>{favCount}개 문장 저장됨</div>
-              </div>
-              <div style={{ color: C.sub, fontSize: 18 }}>›</div>
-            </div>
-          </div>
-        )}
-
         <div style={S.label}>카테고리</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
           {categories.map(cat => (
@@ -477,6 +464,19 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
         </div>
 
         {/* 8번: 다이어리 섹션 */}
+        {favCount > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={S.label}>저장한 문장</div>
+            <div style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }} onClick={() => go("favoriteList")}>
+              <div style={{ flex: 1 }}>
+                <div style={S.listTitle}>⭐ 저장한 문장</div>
+                <div style={S.listSub}>{favCount}개 문장 저장됨</div>
+              </div>
+              <div style={{ color: C.sub, fontSize: 18 }}>›</div>
+            </div>
+          </div>
+        )}
+
         <div style={S.label}>Diary</div>
         <div style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }} onClick={() => go("diaryList")}>
           <div style={{ flex: 1 }}>

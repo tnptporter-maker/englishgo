@@ -128,13 +128,16 @@ Example: "I'm going to give up on this project" → ["I'm", "going to", "give up
   return sentence.split(" ");
 }
 
-// 11번: 차분한 색상으로 변경
 const C = {
   bg: "#F7F8FC", card: "#FFFFFF", primary: "#2D6BE4",
   success: "#16A34A", danger: "#DC2626", warn: "#D97706",
-  successBg: "#F0FDF4", successBorder: "#86EFAC", successText: "#15803D",
+  // 정답/오답 배경·텍스트 (차분한 톤)
+  successBg: "#FEFCE8", successBorder: "#FDE047", successText: "#854D0E",
   dangerBg: "#FEF2F2", dangerBorder: "#FCA5A5", dangerText: "#B91C1C",
+  // 완료 뱃지 - 노란색 계열
+  doneBg: "#FEF9C3", doneBorder: "#FDE047", doneText: "#854D0E",
   text: "#111827", sub: "#6B7280", border: "#E5E7EB", pill: "#EEF2FF",
+  yellow: "#FFD966", yellowLight: "#FFFBEB", yellowDark: "#92400E",
 };
 
 const S = {
@@ -144,7 +147,7 @@ const S = {
   label: { fontSize: 14, fontWeight: 700, color: C.sub, marginBottom: 8, letterSpacing: 0.3 },
   listTitle: { fontWeight: 700, color: C.text, fontSize: 16, textAlign: "left" },
   listSub: { fontSize: 13, color: C.sub, marginTop: 3, textAlign: "left" },
-  page: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif", overflowY: "auto", userSelect: "none", WebkitUserSelect: "none" },
+  page: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif", overflowY: "auto", userSelect: "none", WebkitUserSelect: "none", touchAction: "pan-y" },
   pageInner: { flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" },
   quitBtn: { borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", border: "none", background: "#FEE2E2", color: "#EF4444", flexShrink: 0 },
 };
@@ -465,7 +468,7 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
         {/* 9번: 최신순 다이어리 미리보기 3개 */}
         {sortedDiaries.slice(0, 3).map((diary, i) => (
           <div key={diary.id} onClick={() => go("diaryDetail", { diaryId: diary.id })}
-            style={{ ...S.card, marginBottom: 8, cursor: "pointer", borderLeft: `3px solid #A78BFA`, padding: "12px 16px" }}>
+            style={{ ...S.card, marginBottom: 8, cursor: "pointer", borderLeft: `3px solid ${C.yellow}`, padding: "12px 16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
               <div style={{ fontSize: 11, color: C.sub }}>{diary.date} · {diary.sourceName}</div>
             </div>
@@ -700,9 +703,9 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   const studiedCount = lessonItems.filter(i => progress[i.ItemID]?.history?.length > 0).length;
   const quizDone = quizProgress[saveKey] === "done";
 
-  // 7번: 각 스텝 완료 여부
+  // 7번: 각 스텝 완료 여부 (영상보기는 완료 표시 없음 - 1번)
   const steps = [
-    ytId ? { id: "video", icon: "🎬", label: "영상 보기", sub: "유튜브 강의", done: lessonStepDone.video } : null,
+    ytId ? { id: "video", icon: "🎬", label: "영상 보기", sub: "유튜브 강의", done: false } : null,
     { id: "read", icon: "🗣️", label: "따라읽기", sub: `${lessonItems.length}문장 × 2회`, done: lessonStepDone.read },
     { id: "build", icon: "🧩", label: "영작하기", sub: "단어 조각으로 문장 만들기", done: lessonStepDone.build },
     // 6번: 퀴즈 → Speaking Test
@@ -749,12 +752,12 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
                 const screenMap = { video: "stepVideo", read: "stepRead", build: "stepBuild", quiz: "stepQuiz", diary: "stepDiary" };
                 go(screenMap[step.id], { ...nav, fromLesson: true });
               }}
-              style={{ ...S.card, display: "flex", alignItems: "center", gap: 14, cursor: "pointer", border: step.done ? `2px solid #86EFAC` : "none" }}>
+              style={{ ...S.card, display: "flex", alignItems: "center", gap: 14, cursor: "pointer", border: step.done ? `2px solid ${C.doneBorder}` : "none" }}>
               <div style={{ fontSize: 28, minWidth: 36, textAlign: "center" }}>{step.icon}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ ...S.listTitle, display: "flex", alignItems: "center", gap: 8 }}>
                   {step.label}
-                  {step.done && <span style={{ fontSize: 11, background: "#F0FDF4", color: "#15803D", borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>완료</span>}
+                  {step.done && <span style={{ fontSize: 11, background: C.doneBg, color: C.doneText, borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>완료</span>}
                 </div>
                 <div style={S.listSub}>{step.sub}</div>
               </div>
@@ -821,9 +824,9 @@ function StepVideoScreen({ go, nav, lessons, setStepDone }) {
 }
 
 // ─── StepReadScreen: 따라읽기 ─────────────────────────────────────────────────
-// 1번: 그만하기 → lessonSteps로, 3번: 음성 끊김 문제 개선
-function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone }) {
+function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, setQuizProgress }) {
   const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
+  const saveKey = `${nav.lessonId}_${nav.sourceId}`;
   const [idx, setIdx] = useState(0);
   const [round, setRound] = useState(1);
   const [isListening, setIsListening] = useState(false);
@@ -832,6 +835,16 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone }) 
   const recRef = useRef(null);
   const restartTimerRef = useRef(null);
   const item = lessonItems[idx];
+
+  // 7번: 진입 시 quizProgress에 "preview" 저장 (이어하기 감지용)
+  useEffect(() => {
+    setQuizProgress(prev => {
+      if (!prev[saveKey] || prev[saveKey] === null) {
+        return { ...prev, [saveKey]: "preview" };
+      }
+      return prev;
+    });
+  }, []);
 
   useEffect(() => {
     setSpokenThisCard(false);
@@ -947,8 +960,8 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone }) 
             )}
           </div>
           {feedback && (
-            <div style={{ fontSize: 14, fontWeight: 700, color: feedback === "good" ? C.success : C.warn }}>
-              {feedback === "good" ? "✅ 잘 했어요!" : "🔄 다시 해봐요!"}
+            <div style={{ fontSize: 16, fontWeight: 700, color: feedback === "good" ? C.successText : C.yellowDark }}>
+              {feedback === "good" ? "잘 했어요!" : "다시 해봐요!"}
             </div>
           )}
           {spokenThisCard && <div style={{ marginTop: 6, fontSize: 12, color: C.sub }}>Speaking 완료 ✓</div>}
@@ -963,8 +976,9 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone }) 
 }
 
 // ─── StepBuildScreen: 영작하기 ────────────────────────────────────────────────
-function StepBuildScreen({ go, nav, items, setStudyDays, setStepDone }) {
+function StepBuildScreen({ go, nav, items, setStudyDays, setStepDone, setQuizProgress }) {
   const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
+  const saveKey = `${nav.lessonId}_${nav.sourceId}`;
   const [idx, setIdx] = useState(0);
   const [chunks, setChunks] = useState(null);
   const [shuffledChunks, setShuffledChunks] = useState([]);
@@ -974,6 +988,11 @@ function StepBuildScreen({ go, nav, items, setStudyDays, setStepDone }) {
   const item = lessonItems[idx];
 
   useEffect(() => { return () => stopSpeak(); }, []);
+
+  // 7번: 영작하기 진입 시 quizProgress에 "build" 저장 (이어하기 감지)
+  useEffect(() => {
+    setQuizProgress(prev => ({ ...prev, [saveKey]: prev[saveKey] === "done" ? "done" : "build" }));
+  }, []);
 
   useEffect(() => {
     if (!item) return;
@@ -1004,15 +1023,12 @@ function StepBuildScreen({ go, nav, items, setStudyDays, setStepDone }) {
   const handleNext = () => {
     if (idx < lessonItems.length - 1) { setIdx(p => p + 1); }
     else {
-      // 7번: 영작하기 완료 표시
-      const saveKey = `${nav.lessonId}_${nav.sourceId}`;
       setStepDone(prev => ({ ...prev, [saveKey]: { ...(prev[saveKey] || {}), build: true } }));
       setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
       go("stepQuiz", nav);
     }
   };
 
-  // 11번: 차분한 OX 색상
   const resultBg = submitted ? (correct ? C.successBg : C.dangerBg) : "#F8FAFF";
   const resultBorder = submitted ? (correct ? C.successBorder : C.dangerBorder) : C.border;
 
@@ -1026,7 +1042,7 @@ function StepBuildScreen({ go, nav, items, setStudyDays, setStepDone }) {
           <button onClick={() => go("lessonSteps")} style={S.quitBtn}>그만하기</button>
         </div>
         <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 16 }}>
-          <div style={{ height: "100%", width: `${Math.round((idx / lessonItems.length) * 100)}%`, background: "#F59E0B", borderRadius: 99, transition: "width 0.3s" }} />
+          <div style={{ height: "100%", width: `${Math.round((idx / lessonItems.length) * 100)}%`, background: C.yellow, borderRadius: 99, transition: "width 0.3s" }} />
         </div>
         <div style={{ ...S.card, marginBottom: 12, padding: "16px", textAlign: "center" }}>
           <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, marginBottom: 6 }}>다음을 영어로 만드세요</div>
@@ -1038,17 +1054,16 @@ function StepBuildScreen({ go, nav, items, setStudyDays, setStepDone }) {
           ) : (
             selected.map((si, i) => (
               <span key={i} onClick={() => !submitted && handleSelect(si)}
-                style={{ background: submitted ? (correct ? "#DCFCE7" : "#FEE2E2") : C.primary, color: submitted ? (correct ? C.successText : C.dangerText) : "#fff", borderRadius: 8, padding: "5px 10px", fontSize: 14, fontWeight: 600, cursor: submitted ? "default" : "pointer" }}>
+                style={{ background: submitted ? (correct ? C.successBg : C.dangerBg) : C.primary, color: submitted ? (correct ? C.successText : C.dangerText) : "#fff", borderRadius: 8, padding: "5px 10px", fontSize: 14, fontWeight: 600, cursor: submitted ? "default" : "pointer", border: submitted ? `1px solid ${correct ? C.successBorder : C.dangerBorder}` : "none" }}>
                 {chunks?.[shuffledChunks[si]]}
               </span>
             ))
           )}
         </div>
-        {/* 11번: OX 결과 차분한 색상 */}
+        {/* 6번: 이모지 없애고 글자 크게 */}
         {submitted && (
-          <div style={{ ...S.card, marginBottom: 12, padding: "20px 16px 16px", textAlign: "center", background: correct ? C.successBg : C.dangerBg, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}` }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>{correct ? "✓" : "✗"}</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: correct ? C.successText : C.dangerText, marginBottom: 6 }}>{correct ? "정답이에요!" : "다시 확인해봐요"}</div>
+          <div style={{ ...S.card, marginBottom: 12, padding: "24px 16px 20px", textAlign: "center", background: correct ? C.successBg : C.dangerBg, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}` }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 8 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
             <div style={{ fontSize: 14, color: C.text, fontWeight: 600, marginBottom: 8 }}>{item?.English}</div>
             <button onClick={() => speak(item?.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px" }}>🔊 듣기</button>
           </div>
@@ -1222,9 +1237,9 @@ function StepQuizScreen({ go, nav, items, progress, setProgress, setStudyDays, q
           </>
         ) : (
           <>
-            {/* 11번: 차분한 OX 색상 */}
+            {/* 6번: 이모지 없애고 글자 크게 */}
             <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}`, background: correct ? C.successBg : C.dangerBg, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
-              <div style={{ fontSize: 52, marginBottom: 20, color: correct ? C.successText : C.dangerText }}>{correct ? "✓" : "✗"}</div>
+              <div style={{ fontSize: 30, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 16 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6, marginBottom: 8 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 13 }}>내 답: {answer}</div>}
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginTop: 16 }}>🔊 정답 듣기</button>
@@ -1241,17 +1256,17 @@ function StepQuizScreen({ go, nav, items, progress, setProgress, setStudyDays, q
 }
 
 // ─── StepDiaryScreen: Diary 작성 ──────────────────────────────────────────────
-// 8번: 레슨 학습 후 다이어리 작성 화면
-function StepDiaryScreen({ go, nav, lessons, sources, items, diaries, setDiaries, setStepDone }) {
+function StepDiaryScreen({ go, nav, lessons, sources, diaries, setDiaries, setStepDone }) {
   const lesson = lessons.find(l => l.LessonID === nav.lessonId && l.SourceID === nav.sourceId);
   const src = sources.find(s => s.SourceID === nav.sourceId);
-  const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
   const [content, setContent] = useState("");
   const [saved, setSaved] = useState(false);
 
+  // 9번: 구글시트 Lesson의 DiaryPrompt 컬럼 활용
+  const diaryPrompt = lesson?.DiaryPrompt || "";
+
   const handleSave = () => {
     if (!content.trim()) return;
-    // 10번: 건건마다 중복 저장 허용
     const newDiary = {
       id: `${nav.lessonId}_${nav.sourceId}_${Date.now()}`,
       lessonId: nav.lessonId,
@@ -1262,17 +1277,33 @@ function StepDiaryScreen({ go, nav, lessons, sources, items, diaries, setDiaries
       date: today(),
       createdAt: new Date().toISOString(),
     };
-    // 7번: 다이어리 완료 표시
     const saveKey = `${nav.lessonId}_${nav.sourceId}`;
     setStepDone(prev => ({ ...prev, [saveKey]: { ...(prev[saveKey] || {}), diary: true } }));
     setDiaries(prev => [newDiary, ...prev]);
     setSaved(true);
   };
 
+  // 3번: 예쁜 공책 SVG
+  const NotebookSVG = () => (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="8" width="52" height="64" rx="6" fill="#FEF9C3" stroke="#FDE047" strokeWidth="2"/>
+      <rect x="14" y="8" width="12" height="64" rx="6" fill="#FDE047"/>
+      <rect x="14" y="8" width="12" height="64" rx="0" fill="#FDE047" style={{clipPath:"inset(0 0 0 6px)"}}/>
+      <circle cx="20" cy="24" r="3" fill="#fff"/>
+      <circle cx="20" cy="40" r="3" fill="#fff"/>
+      <circle cx="20" cy="56" r="3" fill="#fff"/>
+      <line x1="32" y1="28" x2="58" y2="28" stroke="#FDE047" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="32" y1="36" x2="58" y2="36" stroke="#FDE047" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="32" y1="44" x2="58" y2="44" stroke="#FDE047" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="32" y1="52" x2="50" y2="52" stroke="#FDE047" strokeWidth="1.5" strokeLinecap="round"/>
+      <text x="34" y="22" fontSize="11" fill="#92400E" fontWeight="700" fontFamily="sans-serif">diary</text>
+    </svg>
+  );
+
   if (saved) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>📓</div>
-      <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>저장됐어요!</div>
+      <NotebookSVG />
+      <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8, marginTop: 16 }}>저장됐어요!</div>
       <div style={{ color: C.sub, fontSize: 14, marginBottom: 32, textAlign: "center" }}>오늘의 학습 기록이 다이어리에 남았어요</div>
       <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.primary, color: "#fff", width: "100%", maxWidth: 320, padding: 16, fontSize: 15 }}>← 레슨으로</button>
     </div>
@@ -1287,33 +1318,31 @@ function StepDiaryScreen({ go, nav, lessons, sources, items, diaries, setDiaries
           <button onClick={() => go("lessonSteps")} style={S.quitBtn}>건너뛰기</button>
         </div>
 
-        <div style={{ ...S.card, marginBottom: 16, borderLeft: `4px solid #7C3AED` }}>
+        <div style={{ ...S.card, marginBottom: 16, borderLeft: `4px solid ${C.yellow}`, background: C.yellowLight }}>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 2 }}>{lesson?.Title}</div>
           <div style={{ fontSize: 12, color: C.sub }}>{src?.Name}</div>
         </div>
 
-        <div style={{ ...S.card, marginBottom: 16, padding: "14px 16px" }}>
-          <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, marginBottom: 8 }}>오늘 배운 표현들</div>
-          {lessonItems.slice(0, 3).map(item => (
-            <div key={item.ItemID} style={{ fontSize: 13, color: C.text, marginBottom: 4 }}>• {item.English}</div>
-          ))}
-          {lessonItems.length > 3 && <div style={{ fontSize: 12, color: C.sub }}>외 {lessonItems.length - 3}개...</div>}
+        {/* 9번: DiaryPrompt가 있으면 표시, 없으면 기본 안내 */}
+        <div style={{ ...S.card, marginBottom: 16, padding: "14px 16px", background: C.yellowLight, border: `1px solid ${C.doneBorder}` }}>
+          <div style={{ fontSize: 13, color: C.yellowDark, lineHeight: 1.6 }}>
+            {diaryPrompt || "오늘 배운 표현을 활용해서 자유롭게 글을 써보세요. 짧아도 괜찮아요! ✍️"}
+          </div>
         </div>
 
         <div style={{ ...S.card, marginBottom: 16, padding: "14px 16px" }}>
-          <div style={{ fontSize: 13, color: C.sub, marginBottom: 10 }}>오늘 배운 내용을 활용해서 자유롭게 글을 써보세요. 짧아도 괜찮아요! ✍️</div>
           <textarea
             value={content}
             onChange={e => setContent(e.target.value)}
-            placeholder="오늘 배운 표현을 써봐요..."
+            placeholder="여기에 써보세요..."
             style={{ ...S.input, resize: "none", fontSize: 15, padding: "12px", lineHeight: 1.7, minHeight: 160 }}
           />
           <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textAlign: "right" }}>{content.length}자</div>
         </div>
 
         <button onClick={handleSave} disabled={!content.trim()}
-          style={{ ...S.btn, width: "100%", background: content.trim() ? "#7C3AED" : C.border, color: content.trim() ? "#fff" : C.sub, padding: 14, fontSize: 15, opacity: content.trim() ? 1 : 0.5 }}>
-          저장하기 📓
+          style={{ ...S.btn, width: "100%", background: content.trim() ? C.yellow : C.border, color: content.trim() ? C.yellowDark : C.sub, padding: 14, fontSize: 15, opacity: content.trim() ? 1 : 0.5, fontWeight: 800 }}>
+          저장하기
         </button>
       </div>
     </div>
@@ -1442,9 +1471,9 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
           </>
         ) : (
           <>
-            {/* 11번: 차분한 OX */}
+            {/* 6번: 이모지 없애고 글자 크게 */}
             <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}`, background: correct ? C.successBg : C.dangerBg, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
-              <div style={{ fontSize: 52, marginBottom: 20, color: correct ? C.successText : C.dangerText }}>{correct ? "✓" : "✗"}</div>
+              <div style={{ fontSize: 30, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 16 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 13, marginTop: 8 }}>내 답: {answer}</div>}
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginTop: 16 }}>🔊 정답 듣기</button>
@@ -1699,9 +1728,9 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setProgress, setStu
           </>
         ) : (
           <>
-            {/* 11번: 차분한 OX */}
+            {/* 6번: 이모지 없애고 글자 크게 */}
             <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}`, background: correct ? C.successBg : C.dangerBg, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
-              <div style={{ fontSize: 52, marginBottom: 20, color: correct ? C.successText : C.dangerText }}>{correct ? "✓" : "✗"}</div>
+              <div style={{ fontSize: 30, fontWeight: 900, color: correct ? C.successText : C.dangerText, marginBottom: 16 }}>{correct ? "정답이에요!" : "틀렸어요"}</div>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6, marginBottom: 8 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 13 }}>내 답: {answer}</div>}
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginTop: 16 }}>🔊 정답 듣기</button>
@@ -1743,7 +1772,7 @@ function DiaryListScreen({ go, diaries, setDiaries }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {sorted.map(diary => (
             <div key={diary.id} onClick={() => go("diaryDetail", { diaryId: diary.id })}
-              style={{ ...S.card, cursor: "pointer", borderLeft: `3px solid #7C3AED`, padding: "14px 16px" }}>
+              style={{ ...S.card, cursor: "pointer", borderLeft: `3px solid ${C.yellow}`, padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 {/* 8번: 날짜, 교재명, 레슨명 */}
                 <div style={{ fontSize: 11, color: C.sub }}>{diary.date} · {diary.sourceName}</div>
@@ -1776,7 +1805,7 @@ function DiaryDetailScreen({ go, nav, diaries }) {
           <button onClick={() => go("diaryList")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 15, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{diary.lessonTitle}</div>
         </div>
-        <div style={{ ...S.card, marginBottom: 16, borderLeft: `4px solid #7C3AED` }}>
+        <div style={{ ...S.card, marginBottom: 16, borderLeft: `4px solid ${C.yellow}` }}>
           <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>{diary.date} · {diary.sourceName}</div>
           <div style={{ fontWeight: 700, fontSize: 15, color: C.text }}>{diary.lessonTitle}</div>
         </div>

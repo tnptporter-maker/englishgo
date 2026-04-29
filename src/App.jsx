@@ -694,6 +694,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
   const src = sources.find(s => s.SourceID === nav.sourceId);
   const saveKey = `${nav.lessonId}_${nav.sourceId}`;
+  console.log("saveKey:", saveKey, "quizProgress:", JSON.stringify(quizProgress));
   const lessonStepDone = stepDone[saveKey] || {};
 
   // 2번: 이어하기 팝업

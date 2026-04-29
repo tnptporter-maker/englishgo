@@ -85,7 +85,7 @@ async function fetchSheet(sheetName) {
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
     const res = await fetch(url);
     const text = await res.text();
-    const rows = text.trim().split("\n").map(row => {
+    const rows = text.trim().split(/\r?\n(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(row => {
       const cells = [];
       let current = "", inQuotes = false;
       for (let i = 0; i < row.length; i++) {
@@ -93,13 +93,14 @@ async function fetchSheet(sheetName) {
         else if (row[i] === ',' && !inQuotes) { cells.push(current.trim()); current = ""; }
         else { current += row[i]; }
       }
+      }
       cells.push(current.trim());
       return cells;
     });
     const headers = rows[0];
     return rows.slice(1).filter(r => r.some(c => c)).map(row => {
       const obj = {};
-      headers.forEach((h, i) => { obj[h] = row[i] || ""; });
+      headers.forEach((h, i) => { obj[h] = (row[i] || "").replace(/\\n/g, "\n"); });
       return obj;
     });
   } catch (e) {
@@ -699,7 +700,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   const [showResumePopup, setShowResumePopup] = useState(false);
   useEffect(() => {
     const saved = quizProgress[saveKey];
-    if (nav.fromHome && saved && saved !== "done") {
+    if (saved && saved !== "done") {
       setShowResumePopup(true);
     }
   }, []);

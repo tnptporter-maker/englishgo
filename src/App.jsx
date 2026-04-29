@@ -93,7 +93,6 @@ async function fetchSheet(sheetName) {
         else if (row[i] === ',' && !inQuotes) { cells.push(current.trim()); current = ""; }
         else { current += row[i]; }
       }
-      }
       cells.push(current.trim());
       return cells;
     });
@@ -321,9 +320,7 @@ export default function App() {
     stopSpeak();
     screenHistory.current.push(s);
     window.history.pushState(null, "", window.location.pathname);
-    if (navUpdate !== null) {
-      if (navUpdate !== null) setNav(p => ({ ...p, ...navUpdate }));
-    }
+    if (navUpdate !== null) setNav(p => ({ ...p, ...navUpdate }));
     setScreen(s);
   };
 
@@ -694,7 +691,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
   const src = sources.find(s => s.SourceID === nav.sourceId);
   const saveKey = `${nav.lessonId}_${nav.sourceId}`;
-  console.log("saveKey:", saveKey, "quizProgress:", JSON.stringify(quizProgress));
+  
   const lessonStepDone = stepDone[saveKey] || {};
 
   // 2번: 이어하기 팝업

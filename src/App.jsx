@@ -686,7 +686,7 @@ function LessonScreen({ go, nav, sources, lessons, items, progress }) {
 
 // ─── LessonStepsScreen ────────────────────────────────────────────────────────
 // 2번: 이어하기/처음부터 팝업 + 7번: 각 스텝 완료 표시 + 6번: Speaking Test 명칭
-function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizProgress, stepDone, setStepDone }) {
+function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizProgress, setQuizProgress, stepDone, setStepDone }) {
   const lesson = lessons.find(l => l.LessonID === nav.lessonId && l.SourceID === nav.sourceId);
   const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
   const src = sources.find(s => s.SourceID === nav.sourceId);
@@ -698,7 +698,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   const [showResumePopup, setShowResumePopup] = useState(false);
   useEffect(() => {
     const saved = quizProgress[saveKey];
-    if (saved && saved !== "done") {
+    if (nav.fromHome && saved && saved !== "done") {
       setShowResumePopup(true);
     }
   }, []);
@@ -738,6 +738,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   // 2번: 처음부터 시작 시 quizProgress 리셋
   const handleRestart = () => {
     setShowResumePopup(false);
+    setQuizProgress(prev => ({ ...prev, [saveKey]: null }));
   };
 
   return (
@@ -803,9 +804,9 @@ function StepVideoScreen({ go, nav, lessons, setStepDone }) {
     <div style={S.page}>
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("lessonSteps", { fromHome: false })} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
-          <button onClick={() => go("lessonSteps")} style={S.quitBtn}>그만하기</button>
+          <button onClick={() => go("lessonSteps", { fromHome: false })} style={S.quitBtn}>그만하기</button>
         </div>
         {ytId ? (
           <>
@@ -943,10 +944,10 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, se
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("lessonSteps", { fromHome: false })} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <div style={{ fontSize: 12, color: C.sub, flexShrink: 0 }}>{currentNum}/{totalItems}</div>
-          <button onClick={() => { stopSpeak(); stopRepeat(); go("lessonSteps"); }} style={S.quitBtn}>그만하기</button>
+          <button onClick={() => { stopSpeak(); stopRepeat(); go("lessonSteps", { fromHome: false }); }} style={S.quitBtn}>그만하기</button>
         </div>
         <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 12 }}>
           <div style={{ height: "100%", width: `${Math.round((currentNum / totalItems) * 100)}%`, background: C.primary, borderRadius: 99, transition: "width 0.3s" }} />
@@ -1045,10 +1046,10 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("lessonSteps", { fromHome: false })} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <div style={{ fontSize: 12, color: C.sub, flexShrink: 0 }}>{idx + 1}/{lessonItems.length}</div>
-          <button onClick={() => go("lessonSteps")} style={S.quitBtn}>그만하기</button>
+          <button onClick={() => go("lessonSteps", { fromHome: false })} style={S.quitBtn}>그만하기</button>
         </div>
         <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 16 }}>
           <div style={{ height: "100%", width: `${Math.round((idx / lessonItems.length) * 100)}%`, background: C.yellow, borderRadius: 99, transition: "width 0.3s" }} />
@@ -1216,9 +1217,9 @@ function StepQuizScreen({ go, nav, items, lessons, progress, setProgress, setStu
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("lessonSteps", { fromHome: false })} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontSize: 14, color: C.text, fontWeight: 700, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
-          <button onClick={() => { stopSpeak(); stopMic(); go("lessonSteps"); }} style={S.quitBtn}>그만하기</button>
+          <button onClick={() => { stopSpeak(); stopMic(); go("lessonSteps", { fromHome: false }); }} style={S.quitBtn}>그만하기</button>
         </div>
         <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 14 }}>
           <div style={{ height: "100%", width: `${Math.round((quizIdx / lessonItems.length) * 100)}%`, background: C.primary, borderRadius: 99, transition: "width 0.3s" }} />
@@ -1343,7 +1344,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, diaries, setDiaries, setSt
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <button onClick={() => go("lessonSteps", { fromHome: false })} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <button onClick={() => go("lessonSteps")} style={S.quitBtn}>건너뛰기</button>
         </div>

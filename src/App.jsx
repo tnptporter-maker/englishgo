@@ -1284,7 +1284,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, diaries, setDiaries, setSt
   const [saved, setSaved] = useState(false);
 
   // 9번: 구글시트 Lesson의 DiaryPrompt 컬럼 활용
-  const diaryPrompt = lesson?.DiaryPrompt || "";
+  const diaryPrompt = (lesson?.DiaryPrompt || "").replace(/\\n/g, "\n");
 
   const handleSave = () => {
     if (!content.trim()) return;
@@ -1362,7 +1362,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, diaries, setDiaries, setSt
 
         {/* 9번: DiaryPrompt가 있으면 표시, 없으면 기본 안내 */}
         <div style={{ ...S.card, marginBottom: 16, padding: "14px 16px", background: C.yellowLight, border: `1px solid ${C.doneBorder}` }}>
-          <div style={{ fontSize: 13, color: C.yellowDark, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 13, color: C.yellowDark, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
             {diaryPrompt || "오늘 배운 표현을 활용해서 자유롭게 글을 써보세요. 짧아도 괜찮아요! ✍️"}
           </div>
         </div>

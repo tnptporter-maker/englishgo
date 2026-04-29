@@ -152,7 +152,7 @@ const C = {
   success: "#16A34A", danger: "#DC2626", warn: "#D97706",
   // 정답/오답 배경·텍스트 (차분한 톤)
   successBg: "#FFD966", successBorder: "#FFD966", successText: "#7A5800",
-  dangerBg: "#F0F0F0", dangerBorder: "#F0F0F0", dangerText: "#555555",
+  dangerBg: "#FFFFFF", dangerBorder: "#E8622A", dangerText: "#E8622A",
   // 완료 뱃지 - 노란색 계열
   doneBg: "#FEF9C3", doneBorder: "#FDE047", doneText: "#854D0E",
   text: "#111827", sub: "#6B7280", border: "#E5E7EB", pill: "#EEF2FF",
@@ -1090,7 +1090,7 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
                 const isSelected = selected.includes(si);
                 return (
                   <button key={si} onClick={() => handleSelect(si)} disabled={submitted}
-                    style={{ ...S.btn, padding: "8px 14px", fontSize: 14, background: isSelected ? "#E5E7EB" : C.card, color: isSelected ? C.text : C.text, border: `1.5px solid ${isSelected ? "#9CA3AF" : C.border}`, opacity: submitted ? 0.5 : 1, fontWeight: 600 }}>
+                    style={{ ...S.btn, padding: "8px 14px", fontSize: 14, background: isSelected ? "#E5E7EB" : C.card, color: isSelected ? C.text : C.text, border: `1.5px solid ${C.border}`, opacity: submitted ? 0.5 : 1, fontWeight: 600 }}>
                     {chunks[chunkIdx]}
                   </button>
                 );
@@ -1106,7 +1106,7 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
                 style={{ ...S.btn, flex: 2, background: selected.length > 0 ? C.yellow : C.border, color: selected.length > 0 ? C.yellowDark : C.sub }}>확인</button>
             </>
           ) : (
-            <button onClick={handleNext} style={{ ...S.btn, flex: 1, background: C.primary, color: "#fff", padding: 14, fontSize: 15 }}>
+            <button onClick={handleNext} style={{ ...S.btn, flex: 1, background: C.yellow, color: C.yellowDark, padding: 14, fontSize: 15 }}>
               {idx < lessonItems.length - 1 ? "다음 →" : "완료 → Speaking Test"}
             </button>
           )}

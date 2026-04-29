@@ -851,7 +851,7 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, se
       }
       return prev;
     });
-  }, []);
+  }, [saveKey]);
 
   useEffect(() => {
     setSpokenThisCard(false);
@@ -1002,7 +1002,7 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
   // 7번: 영작하기 진입 시 quizProgress에 "build" 저장 (이어하기 감지)
   useEffect(() => {
     setQuizProgress(prev => ({ ...prev, [saveKey]: prev[saveKey] === "done" ? "done" : "build" }));
-  }, []);
+  }, [saveKey]);
 
   useEffect(() => {
     if (!item) return;
@@ -1039,7 +1039,7 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
     }
   };
 
-  const resultBg = submitted ? (correct ? C.successBg : C.dangerBg) : "#F8FAFF";
+  const resultBg = "#fff";
   const resultBorder = submitted ? (correct ? C.successBorder : C.dangerBorder) : C.border;
 
   return (
@@ -1064,7 +1064,7 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
           ) : (
             selected.map((si, i) => (
               <span key={i} onClick={() => !submitted && handleSelect(si)}
-                style={{ background: submitted ? (correct ? C.successBg : C.dangerBg) : C.primary, color: submitted ? (correct ? C.successText : C.dangerText) : "#fff", borderRadius: 8, padding: "5px 10px", fontSize: 14, fontWeight: 600, cursor: submitted ? "default" : "pointer", border: submitted ? `1px solid ${correct ? C.successBorder : C.dangerBorder}` : "none" }}>
+                style={{ background: submitted ? (correct ? C.successBg : C.dangerBg) : C.yellow, color: submitted ? (correct ? C.successText : C.dangerText) : C.yellowDark, borderRadius: 8, padding: "5px 10px", fontSize: 14, fontWeight: 600, cursor: submitted ? "default" : "pointer", border: submitted ? `1px solid ${correct ? C.successBorder : C.dangerBorder}` : "none" }}>
                 {chunks?.[shuffledChunks[si]]}
               </span>
             ))
@@ -1088,7 +1088,7 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
                 const isSelected = selected.includes(si);
                 return (
                   <button key={si} onClick={() => handleSelect(si)} disabled={submitted}
-                    style={{ ...S.btn, padding: "8px 14px", fontSize: 14, background: isSelected ? C.yellow : C.card, color: isSelected ? C.yellowDark : C.text, border: `1.5px solid ${isSelected ? C.yellow : C.border}`, opacity: submitted ? 0.5 : 1, fontWeight: 600 }}>
+                    style={{ ...S.btn, padding: "8px 14px", fontSize: 14, background: isSelected ? "#E5E7EB" : C.card, color: isSelected ? C.text : C.text, border: `1.5px solid ${isSelected ? "#9CA3AF" : C.border}`, opacity: submitted ? 0.5 : 1, fontWeight: 600 }}>
                     {chunks[chunkIdx]}
                   </button>
                 );
@@ -1101,7 +1101,7 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
             <>
               <button onClick={() => setSelected([])} style={{ ...S.btn, flex: 1, background: C.border, color: C.text }}>초기화</button>
               <button onClick={handleSubmit} disabled={selected.length === 0}
-                style={{ ...S.btn, flex: 2, background: selected.length > 0 ? C.primary : C.border, color: selected.length > 0 ? "#fff" : C.sub }}>확인</button>
+                style={{ ...S.btn, flex: 2, background: selected.length > 0 ? C.yellow : C.border, color: selected.length > 0 ? C.yellowDark : C.sub }}>확인</button>
             </>
           ) : (
             <button onClick={handleNext} style={{ ...S.btn, flex: 1, background: C.primary, color: "#fff", padding: 14, fontSize: 15 }}>

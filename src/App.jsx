@@ -27,7 +27,6 @@ const today = () => new Date().toISOString().split("T")[0];
 
 const userDocRef = (uid) => doc(db, "users", uid);
 
-// 7번: TTS 중지 전역 함수
 const stopSpeak = () => {
   if (window.speechSynthesis) window.speechSynthesis.cancel();
 };
@@ -52,12 +51,14 @@ async function loadFromFirestore(uid) {
         studyDays: data.studyDays || [],
         quizProgress: data.quizProgress || {},
         favorites: data.favorites || {},
+        diaries: data.diaries || [],
+        stepDone: data.stepDone || {},
       };
     }
-    return { progress: {}, studyDays: [], quizProgress: {}, favorites: {} };
+    return { progress: {}, studyDays: [], quizProgress: {}, favorites: {}, diaries: [], stepDone: {} };
   } catch (e) {
     console.error("Firestore load error:", e);
-    return { progress: {}, studyDays: [], quizProgress: {}, favorites: {} };
+    return { progress: {}, studyDays: [], quizProgress: {}, favorites: {}, diaries: [], stepDone: {} };
   }
 }
 
@@ -127,9 +128,12 @@ Example: "I'm going to give up on this project" → ["I'm", "going to", "give up
   return sentence.split(" ");
 }
 
+// 11번: 차분한 색상으로 변경
 const C = {
   bg: "#F7F8FC", card: "#FFFFFF", primary: "#2D6BE4",
-  success: "#22C55E", danger: "#EF4444", warn: "#F59E0B",
+  success: "#16A34A", danger: "#DC2626", warn: "#D97706",
+  successBg: "#F0FDF4", successBorder: "#86EFAC", successText: "#15803D",
+  dangerBg: "#FEF2F2", dangerBorder: "#FCA5A5", dangerText: "#B91C1C",
   text: "#111827", sub: "#6B7280", border: "#E5E7EB", pill: "#EEF2FF",
 };
 
@@ -161,6 +165,10 @@ export default function App() {
   const [studyDays, setStudyDaysRaw] = useState([]);
   const [quizProgress, setQuizProgressRaw] = useState({});
   const [favorites, setFavoritesRaw] = useState({});
+  // 8번: 다이어리
+  const [diaries, setDiariesRaw] = useState([]);
+  // 7번: 각 스텝 완료 상태 { "lessonId_sourceId": { video: true, read: true, build: true, quiz: true } }
+  const [stepDone, setStepDoneRaw] = useState({});
 
   const saveTimer = useRef(null);
   const pendingSave = useRef({});
@@ -217,6 +225,24 @@ export default function App() {
     });
   }, [user, saveToFirestore]);
 
+  // 8번: 다이어리 저장
+  const setDiaries = useCallback((updater) => {
+    setDiariesRaw(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      if (user?.uid) saveToFirestore(user.uid, { diaries: next });
+      return next;
+    });
+  }, [user, saveToFirestore]);
+
+  // 7번: 스텝 완료 저장
+  const setStepDone = useCallback((updater) => {
+    setStepDoneRaw(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      if (user?.uid) saveToFirestore(user.uid, { stepDone: next });
+      return next;
+    });
+  }, [user, saveToFirestore]);
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
@@ -227,12 +253,16 @@ export default function App() {
         setStudyDaysRaw(data.studyDays);
         setQuizProgressRaw(data.quizProgress);
         setFavoritesRaw(data.favorites);
+        setDiariesRaw(data.diaries || []);
+        setStepDoneRaw(data.stepDone || {});
         setFsLoading(false);
       } else {
         setProgressRaw({});
         setStudyDaysRaw([]);
         setQuizProgressRaw({});
         setFavoritesRaw({});
+        setDiariesRaw([]);
+        setStepDoneRaw({});
       }
       setAuthLoading(false);
     });
@@ -266,7 +296,7 @@ export default function App() {
   }, []);
 
   const go = (s, navUpdate = {}) => {
-    stopSpeak(); // 7번: 화면 이동시 TTS 중지
+    stopSpeak();
     screenHistory.current.push(s);
     window.history.pushState(null, "", window.location.pathname);
     setNav(p => ({ ...p, ...navUpdate }));
@@ -291,7 +321,7 @@ export default function App() {
   if (!user) return <LoginScreen login={login} />;
   if (dataLoading) return <Center>데이터 불러오는 중...</Center>;
 
-  const shared = { user, logout, go, nav, categories, sources, lessons, items, progress, setProgress, studyDays, setStudyDays, reviewItems, quizProgress, setQuizProgress, favorites, setFavorites };
+  const shared = { user, logout, go, nav, categories, sources, lessons, items, progress, setProgress, studyDays, setStudyDays, reviewItems, quizProgress, setQuizProgress, favorites, setFavorites, diaries, setDiaries, stepDone, setStepDone };
 
   return (
     <>
@@ -305,11 +335,14 @@ export default function App() {
       {screen === "stepRead" && <StepReadScreen {...shared} />}
       {screen === "stepBuild" && <StepBuildScreen {...shared} />}
       {screen === "stepQuiz" && <StepQuizScreen {...shared} />}
+      {screen === "stepDiary" && <StepDiaryScreen {...shared} />}
       {screen === "review" && <ReviewScreen {...shared} />}
       {screen === "scriptLesson" && <ScriptLessonListScreen {...shared} />}
       {screen === "scriptItem" && <ScriptLessonScreen {...shared} />}
       {screen === "favoriteList" && <FavoriteListScreen {...shared} />}
       {screen === "favoriteQuiz" && <FavoriteQuizScreen {...shared} />}
+      {screen === "diaryList" && <DiaryListScreen {...shared} />}
+      {screen === "diaryDetail" && <DiaryDetailScreen {...shared} />}
     </>
   );
 }
@@ -336,10 +369,13 @@ function LoginScreen({ login }) {
   );
 }
 
-function HomeScreen({ user, logout, go, categories, sources, lessons, items, progress, studyDays, reviewItems, quizProgress, favorites }) {
+function HomeScreen({ user, logout, go, categories, sources, lessons, items, progress, studyDays, reviewItems, quizProgress, favorites, diaries }) {
   const [showMenu, setShowMenu] = useState(false);
   const getCatSources = (catId) => sources.filter(s => s.CategoryID === catId);
   const favCount = Object.keys(favorites).length;
+
+  // 8번: 다이어리 최신순 정렬
+  const sortedDiaries = [...diaries].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   return (
     <div style={S.page}>
@@ -405,7 +441,7 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
         )}
 
         <div style={S.label}>카테고리</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
           {categories.map(cat => (
             <div key={cat.CategoryID} onClick={() => go("source", { catId: cat.CategoryID })} style={{ ...S.card, display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
               <div style={{ flex: 1 }}>
@@ -416,12 +452,33 @@ function HomeScreen({ user, logout, go, categories, sources, lessons, items, pro
             </div>
           ))}
         </div>
+
+        {/* 8번: 다이어리 섹션 */}
+        <div style={S.label}>Diary</div>
+        <div style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }} onClick={() => go("diaryList")}>
+          <div style={{ flex: 1 }}>
+            <div style={S.listTitle}>📓 내 다이어리</div>
+            <div style={S.listSub}>{diaries.length}개 기록</div>
+          </div>
+          <div style={{ color: C.sub, fontSize: 18 }}>›</div>
+        </div>
+        {/* 9번: 최신순 다이어리 미리보기 3개 */}
+        {sortedDiaries.slice(0, 3).map((diary, i) => (
+          <div key={diary.id} onClick={() => go("diaryDetail", { diaryId: diary.id })}
+            style={{ ...S.card, marginBottom: 8, cursor: "pointer", borderLeft: `3px solid #A78BFA`, padding: "12px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+              <div style={{ fontSize: 11, color: C.sub }}>{diary.date} · {diary.sourceName}</div>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 2 }}>{diary.lessonTitle}</div>
+            <div style={{ fontSize: 12, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{diary.content}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// 2번 버그 수정: 오늘의 레슨 로직 개선
+// 4번: 오늘의 레슨 - quizProgress 뿐 아니라 stepDone도 고려해서 다음 레슨 판단
 function TodayLesson({ go, lessons, sources, items, progress, quizProgress }) {
   // 진행 중인 레슨 (preview 또는 숫자 - done/null 제외)
   const inProgressLesson = (() => {
@@ -462,14 +519,12 @@ function TodayLesson({ go, lessons, sources, items, progress, quizProgress }) {
     const lastKey = `${lastStudiedLesson.LessonID}_${lastStudiedLesson.SourceID}`;
     const lastSaved = quizProgress[lastKey];
     if (lastSaved === "done") {
-      // 퀴즈 완료된 레슨이면 다음 레슨으로
       const srcLessons = lessons
         .filter(l => l.SourceID === lastStudiedLesson.SourceID)
         .sort((a, b) => Number(a.Order) - Number(b.Order));
       const idx = srcLessons.findIndex(l => l.LessonID === lastStudiedLesson.LessonID);
       return srcLessons[idx + 1] || lessons.find(l => l.SourceID !== lastStudiedLesson.SourceID) || srcLessons[0];
     }
-    // 완료 안 됐으면 그 레슨 자체
     return lastStudiedLesson;
   })();
 
@@ -619,11 +674,23 @@ function LessonScreen({ go, nav, sources, lessons, items, progress }) {
 }
 
 // ─── LessonStepsScreen ────────────────────────────────────────────────────────
-function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizProgress }) {
+// 2번: 이어하기/처음부터 팝업 + 7번: 각 스텝 완료 표시 + 6번: Speaking Test 명칭
+function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizProgress, stepDone, setStepDone }) {
   const lesson = lessons.find(l => l.LessonID === nav.lessonId && l.SourceID === nav.sourceId);
   const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
   const src = sources.find(s => s.SourceID === nav.sourceId);
   const saveKey = `${nav.lessonId}_${nav.sourceId}`;
+  const lessonStepDone = stepDone[saveKey] || {};
+
+  // 2번: 이어하기 팝업
+  const [showResumePopup, setShowResumePopup] = useState(false);
+  useEffect(() => {
+    const saved = quizProgress[saveKey];
+    if (nav.fromHome && saved && saved !== "done") {
+      setShowResumePopup(true);
+    }
+  }, []);
+
   const extractYouTubeId = (url) => {
     if (!url) return null;
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([^&\n?#]+)/);
@@ -632,21 +699,46 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   const ytId = extractYouTubeId(lesson?.VideoURL);
   const studiedCount = lessonItems.filter(i => progress[i.ItemID]?.history?.length > 0).length;
   const quizDone = quizProgress[saveKey] === "done";
+
+  // 7번: 각 스텝 완료 여부
   const steps = [
-    ytId ? { id: "video", icon: "🎬", label: "영상 보기", sub: "유튜브 강의" } : null,
-    { id: "read", icon: "🗣️", label: "따라읽기", sub: `${lessonItems.length}문장 × 2회` },
-    { id: "build", icon: "🧩", label: "영작하기", sub: "단어 조각으로 문장 만들기" },
-    { id: "quiz", icon: "✍️", label: "퀴즈", sub: "직접 영작 테스트", done: quizDone },
+    ytId ? { id: "video", icon: "🎬", label: "영상 보기", sub: "유튜브 강의", done: lessonStepDone.video } : null,
+    { id: "read", icon: "🗣️", label: "따라읽기", sub: `${lessonItems.length}문장 × 2회`, done: lessonStepDone.read },
+    { id: "build", icon: "🧩", label: "영작하기", sub: "단어 조각으로 문장 만들기", done: lessonStepDone.build },
+    // 6번: 퀴즈 → Speaking Test
+    { id: "quiz", icon: "🎤", label: "Speaking Test", sub: "직접 말해보기", done: quizDone },
+    // 8번: Diary 단계 추가
+    { id: "diary", icon: "📓", label: "Diary", sub: "학습 내용으로 글쓰기 연습", done: lessonStepDone.diary },
   ].filter(Boolean);
+
   const backScreen = nav.fromHome ? "home" : "lesson";
+
+  // 2번: 이어하기 팝업에서 이어하기 선택 시
+  const handleResume = () => {
+    setShowResumePopup(false);
+    const saved = quizProgress[saveKey];
+    // preview면 따라읽기로, 숫자면 퀴즈로
+    if (saved === "preview") {
+      go("stepRead", { ...nav, fromLesson: true });
+    } else if (!isNaN(Number(saved))) {
+      go("stepQuiz", { ...nav, fromLesson: true });
+    }
+  };
+
+  // 2번: 처음부터 시작 시 quizProgress 리셋
+  const handleRestart = () => {
+    setShowResumePopup(false);
+  };
+
   return (
     <div style={S.page}>
       <div style={S.pageInner}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+        {/* 5번: 레슨명을 뒤로 버튼 옆에 */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <button onClick={() => go(backScreen)} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <div style={{ fontWeight: 700, fontSize: 15, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
         </div>
         <div style={{ ...S.card, marginBottom: 20, borderLeft: `4px solid ${C.primary}` }}>
-          <div style={{ fontWeight: 800, fontSize: 16, color: C.text, marginBottom: 4 }}>{lesson?.Title}</div>
           <div style={{ fontSize: 13, color: C.sub }}>{src?.Name} · {lessonItems.length}문장 {studiedCount > 0 ? `· ${studiedCount}개 학습됨` : ""}</div>
         </div>
         <div style={S.label}>학습 단계</div>
@@ -654,15 +746,15 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
           {steps.map((step) => (
             <div key={step.id}
               onClick={() => {
-                const screenMap = { video: "stepVideo", read: "stepRead", build: "stepBuild", quiz: "stepQuiz" };
+                const screenMap = { video: "stepVideo", read: "stepRead", build: "stepBuild", quiz: "stepQuiz", diary: "stepDiary" };
                 go(screenMap[step.id], { ...nav, fromLesson: true });
               }}
-              style={{ ...S.card, display: "flex", alignItems: "center", gap: 14, cursor: "pointer", border: step.done ? `2px solid ${C.success}` : "none" }}>
+              style={{ ...S.card, display: "flex", alignItems: "center", gap: 14, cursor: "pointer", border: step.done ? `2px solid #86EFAC` : "none" }}>
               <div style={{ fontSize: 28, minWidth: 36, textAlign: "center" }}>{step.icon}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ ...S.listTitle, display: "flex", alignItems: "center", gap: 8 }}>
                   {step.label}
-                  {step.done && <span style={{ fontSize: 11, background: "#DCFCE7", color: C.success, borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>완료</span>}
+                  {step.done && <span style={{ fontSize: 11, background: "#F0FDF4", color: "#15803D", borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>완료</span>}
                 </div>
                 <div style={S.listSub}>{step.sub}</div>
               </div>
@@ -671,12 +763,26 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
           ))}
         </div>
       </div>
+
+      {/* 2번: 이어하기 팝업 */}
+      {showResumePopup && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 24 }}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: 28, maxWidth: 340, width: "100%" }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 8, textAlign: "center" }}>이어서 학습할까요?</div>
+            <div style={{ fontSize: 14, color: C.sub, textAlign: "center", marginBottom: 24 }}>이전에 학습하던 내용이 있어요</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={handleRestart} style={{ ...S.btn, flex: 1, background: C.border, color: C.text, fontSize: 13 }}>처음부터</button>
+              <button onClick={handleResume} style={{ ...S.btn, flex: 1, background: C.primary, color: "#fff", fontSize: 13 }}>이어하기 →</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── StepVideoScreen ──────────────────────────────────────────────────────────
-function StepVideoScreen({ go, nav, lessons }) {
+function StepVideoScreen({ go, nav, lessons, setStepDone }) {
   const lesson = lessons.find(l => l.LessonID === nav.lessonId && l.SourceID === nav.sourceId);
   const extractYouTubeId = (url) => {
     if (!url) return null;
@@ -687,19 +793,22 @@ function StepVideoScreen({ go, nav, lessons }) {
   return (
     <div style={S.page}>
       <div style={S.pageInner}>
-        {/* 3번, 4번 */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1 }}>🎬 영상 보기</div>
-          <button onClick={() => go("home")} style={S.quitBtn}>그만하기</button>
+          <button onClick={() => go("lessonSteps")} style={S.quitBtn}>그만하기</button>
         </div>
         {ytId ? (
           <>
             <div style={{ borderRadius: 14, overflow: "hidden", marginBottom: 16 }}>
               <iframe width="100%" height="240" src={`https://www.youtube.com/embed/${ytId}`} title="YouTube" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ display: "block" }} />
             </div>
-            {/* 8번: 다음 단계로 */}
-            <button onClick={() => go("stepRead", nav)} style={{ ...S.btn, background: C.primary, color: "#fff", width: "100%", padding: 14, fontSize: 15 }}>
+            <button onClick={() => {
+              // 7번: 영상 완료 표시
+              const saveKey = `${nav.lessonId}_${nav.sourceId}`;
+              setStepDone(prev => ({ ...prev, [saveKey]: { ...(prev[saveKey] || {}), video: true } }));
+              go("stepRead", nav);
+            }} style={{ ...S.btn, background: C.primary, color: "#fff", width: "100%", padding: 14, fontSize: 15 }}>
               다음: 따라읽기 →
             </button>
           </>
@@ -712,14 +821,16 @@ function StepVideoScreen({ go, nav, lessons }) {
 }
 
 // ─── StepReadScreen: 따라읽기 ─────────────────────────────────────────────────
-function StepReadScreen({ go, nav, lessons, items, setStudyDays }) {
+// 1번: 그만하기 → lessonSteps로, 3번: 음성 끊김 문제 개선
+function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone }) {
   const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
   const [idx, setIdx] = useState(0);
   const [round, setRound] = useState(1);
   const [isListening, setIsListening] = useState(false);
-  const [spokenThisCard, setSpokenThisCard] = useState(false); // 6번
+  const [spokenThisCard, setSpokenThisCard] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const recRef = useRef(null);
+  const restartTimerRef = useRef(null);
   const item = lessonItems[idx];
 
   useEffect(() => {
@@ -732,40 +843,72 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays }) {
     return () => { clearTimeout(timer); stopSpeak(); recRef.current?.stop(); };
   }, [idx, round]);
 
-  useEffect(() => { return () => { stopSpeak(); recRef.current?.stop(); }; }, []);
+  useEffect(() => { return () => { stopSpeak(); recRef.current?.stop(); clearTimeout(restartTimerRef.current); }; }, []);
 
+  // 3번: 음성 끊겨도 자동 재시작 (continuous 유지)
   const startRepeat = () => {
-    stopSpeak(); // 7번: 스피킹 누르면 TTS 중지
+    stopSpeak();
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { alert("Chrome을 사용해주세요."); return; }
-    setTimeout(() => {
+
+    const startRec = () => {
       const r = new SR();
-      r.lang = "en-US"; r.continuous = true; r.interimResults = false;
+      r.lang = "en-US";
+      r.continuous = true;
+      r.interimResults = true;
       r.onresult = e => {
-        const result = e.results[e.results.length - 1];
-        if (!result || !result[0]) return;
-        const said = result[0].transcript.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
-        if (!said || said.length < 2) return;
-        const expected = item.English.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
-        const words = expected.split(" ");
-        const matchRatio = words.filter(w => said.includes(w)).length / words.length;
-        setFeedback(matchRatio >= 0.6 ? "good" : "try");
-        setSpokenThisCard(true); // 6번
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) {
+            const said = e.results[i][0].transcript.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+            if (!said || said.length < 2) continue;
+            const expected = item.English.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+            const words = expected.split(" ");
+            const matchRatio = words.filter(w => said.includes(w)).length / words.length;
+            setFeedback(matchRatio >= 0.6 ? "good" : "try");
+            setSpokenThisCard(true);
+          }
+        }
       };
-      r.onerror = () => setIsListening(false);
-      r.start(); recRef.current = r; setIsListening(true);
-    }, 300);
+      // 3번: 끊겨도 자동 재시작
+      r.onend = () => {
+        if (recRef.current === r) {
+          restartTimerRef.current = setTimeout(() => {
+            if (recRef.current === r) {
+              try { r.start(); } catch(e) {}
+            }
+          }, 200);
+        }
+      };
+      r.onerror = (e) => {
+        if (e.error === "aborted" || e.error === "not-allowed") {
+          setIsListening(false);
+          recRef.current = null;
+        }
+      };
+      r.start();
+      recRef.current = r;
+      setIsListening(true);
+    };
+    setTimeout(startRec, 300);
   };
 
-  const stopRepeat = () => { recRef.current?.stop(); setIsListening(false); };
+  const stopRepeat = () => {
+    clearTimeout(restartTimerRef.current);
+    const r = recRef.current;
+    recRef.current = null;
+    r?.stop();
+    setIsListening(false);
+  };
 
-  // 8번: 완료 후 영작하기로 연결
   const handleNext = () => {
     if (idx < lessonItems.length - 1) {
       setIdx(p => p + 1);
     } else if (round === 1) {
       setRound(2); setIdx(0);
     } else {
+      // 7번: 따라읽기 완료 표시
+      const saveKey = `${nav.lessonId}_${nav.sourceId}`;
+      setStepDone(prev => ({ ...prev, [saveKey]: { ...(prev[saveKey] || {}), read: true } }));
       setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
       go("stepBuild", nav);
     }
@@ -777,12 +920,12 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays }) {
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
-        {/* 3번, 4번 */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 13, color: C.text, flex: 1 }}>🗣️ 따라읽기 {round}회차</div>
           <div style={{ fontSize: 12, color: C.sub, flexShrink: 0 }}>{currentNum}/{totalItems}</div>
-          <button onClick={() => { stopSpeak(); recRef.current?.stop(); go("home"); }} style={S.quitBtn}>그만하기</button>
+          {/* 1번: 그만하기 → lessonSteps로 */}
+          <button onClick={() => { stopSpeak(); stopRepeat(); go("lessonSteps"); }} style={S.quitBtn}>그만하기</button>
         </div>
         <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 12 }}>
           <div style={{ height: "100%", width: `${Math.round((currentNum / totalItems) * 100)}%`, background: C.primary, borderRadius: 99, transition: "width 0.3s" }} />
@@ -795,10 +938,8 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays }) {
           <div style={{ color: C.sub, fontSize: 18, lineHeight: 1.6, marginBottom: 20 }}>{item?.Korean}</div>
           <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.6, marginBottom: 20 }}>{item?.English}</div>
           <div style={{ display: "flex", gap: 10, width: "100%", marginBottom: 12 }}>
-            {/* 7번: 듣기 누르면 녹음 중지 */}
-            <button onClick={() => { recRef.current?.stop(); setIsListening(false); speak(item?.English); }}
+            <button onClick={() => { stopRepeat(); speak(item?.English); }}
               style={{ ...S.btn, flex: 1, background: C.pill, color: C.primary, fontSize: 13 }}>🔊 듣기</button>
-            {/* 5번: "따라하기" → "Speaking" */}
             {!isListening ? (
               <button onClick={startRepeat} style={{ ...S.btn, flex: 1, background: "#FEF3C7", color: "#92400E", fontSize: 13 }}>🎤 Speaking</button>
             ) : (
@@ -812,7 +953,6 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays }) {
           )}
           {spokenThisCard && <div style={{ marginTop: 6, fontSize: 12, color: C.sub }}>Speaking 완료 ✓</div>}
         </div>
-        {/* 6번: Speaking 해야만 다음 활성화 */}
         <button onClick={handleNext} disabled={!spokenThisCard}
           style={{ ...S.btn, width: "100%", background: spokenThisCard ? C.primary : C.border, color: spokenThisCard ? "#fff" : C.sub, padding: 14, fontSize: 15, opacity: spokenThisCard ? 1 : 0.5 }}>
           {!spokenThisCard ? "🎤 Speaking 후 다음으로" : idx < lessonItems.length - 1 ? "다음 문장 →" : round === 1 ? "2회차 시작 →" : "완료 → 영작하기"}
@@ -823,7 +963,7 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays }) {
 }
 
 // ─── StepBuildScreen: 영작하기 ────────────────────────────────────────────────
-function StepBuildScreen({ go, nav, items, setStudyDays }) {
+function StepBuildScreen({ go, nav, items, setStudyDays, setStepDone }) {
   const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
   const [idx, setIdx] = useState(0);
   const [chunks, setChunks] = useState(null);
@@ -861,22 +1001,29 @@ function StepBuildScreen({ go, nav, items, setStudyDays }) {
     setCorrect(expected === given); setSubmitted(true);
   };
 
-  // 8번: 완료 후 퀴즈로
   const handleNext = () => {
     if (idx < lessonItems.length - 1) { setIdx(p => p + 1); }
-    else { setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]); go("stepQuiz", nav); }
+    else {
+      // 7번: 영작하기 완료 표시
+      const saveKey = `${nav.lessonId}_${nav.sourceId}`;
+      setStepDone(prev => ({ ...prev, [saveKey]: { ...(prev[saveKey] || {}), build: true } }));
+      setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
+      go("stepQuiz", nav);
+    }
   };
 
+  // 11번: 차분한 OX 색상
+  const resultBg = submitted ? (correct ? C.successBg : C.dangerBg) : "#F8FAFF";
+  const resultBorder = submitted ? (correct ? C.successBorder : C.dangerBorder) : C.border;
+
   return (
-    // 9번: overflowY auto로 스크롤 가능
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
-        {/* 3번, 4번 */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 13, flex: 1, color: C.text }}>🧩 영작하기</div>
           <div style={{ fontSize: 12, color: C.sub, flexShrink: 0 }}>{idx + 1}/{lessonItems.length}</div>
-          <button onClick={() => go("home")} style={S.quitBtn}>그만하기</button>
+          <button onClick={() => go("lessonSteps")} style={S.quitBtn}>그만하기</button>
         </div>
         <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 16 }}>
           <div style={{ height: "100%", width: `${Math.round((idx / lessonItems.length) * 100)}%`, background: "#F59E0B", borderRadius: 99, transition: "width 0.3s" }} />
@@ -885,29 +1032,27 @@ function StepBuildScreen({ go, nav, items, setStudyDays }) {
           <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, marginBottom: 6 }}>다음을 영어로 만드세요</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{item?.Korean}</div>
         </div>
-        {/* 선택된 단어 조합 표시 */}
-        <div style={{ ...S.card, minHeight: 56, marginBottom: 12, padding: "12px 16px", background: submitted ? (correct ? "#F0FDF4" : "#FEF2F2") : "#F8FAFF", border: submitted ? `2px solid ${correct ? C.success : C.danger}` : `2px dashed ${C.border}`, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+        <div style={{ ...S.card, minHeight: 56, marginBottom: 12, padding: "12px 16px", background: resultBg, border: `2px ${submitted ? "solid" : "dashed"} ${resultBorder}`, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
           {selected.length === 0 ? (
             <div style={{ color: C.sub, fontSize: 13, width: "100%", textAlign: "center" }}>단어를 선택하세요</div>
           ) : (
             selected.map((si, i) => (
               <span key={i} onClick={() => !submitted && handleSelect(si)}
-                style={{ background: submitted ? (correct ? "#DCFCE7" : "#FEE2E2") : C.primary, color: submitted ? (correct ? C.success : C.danger) : "#fff", borderRadius: 8, padding: "5px 10px", fontSize: 14, fontWeight: 600, cursor: submitted ? "default" : "pointer" }}>
+                style={{ background: submitted ? (correct ? "#DCFCE7" : "#FEE2E2") : C.primary, color: submitted ? (correct ? C.successText : C.dangerText) : "#fff", borderRadius: 8, padding: "5px 10px", fontSize: 14, fontWeight: 600, cursor: submitted ? "default" : "pointer" }}>
                 {chunks?.[shuffledChunks[si]]}
               </span>
             ))
           )}
         </div>
-        {/* 10번: OX 결과 - paddingTop 늘려서 OX 위로 */}
+        {/* 11번: OX 결과 차분한 색상 */}
         {submitted && (
-          <div style={{ ...S.card, marginBottom: 12, padding: "20px 16px 16px", textAlign: "center", background: correct ? "#F0FDF4" : "#FEF2F2", border: `2px solid ${correct ? C.success : C.danger}` }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>{correct ? "⭕" : "❌"}</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: correct ? C.success : C.danger, marginBottom: 6 }}>{correct ? "✅ 정답이에요!" : "❌ 다시 확인해봐요"}</div>
+          <div style={{ ...S.card, marginBottom: 12, padding: "20px 16px 16px", textAlign: "center", background: correct ? C.successBg : C.dangerBg, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}` }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>{correct ? "✓" : "✗"}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: correct ? C.successText : C.dangerText, marginBottom: 6 }}>{correct ? "정답이에요!" : "다시 확인해봐요"}</div>
             <div style={{ fontSize: 14, color: C.text, fontWeight: 600, marginBottom: 8 }}>{item?.English}</div>
             <button onClick={() => speak(item?.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 12, padding: "5px 12px" }}>🔊 듣기</button>
           </div>
         )}
-        {/* 단어 선택 */}
         {chunks === null ? (
           <div style={{ ...S.card, padding: "24px 16px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", color: C.sub, fontSize: 13 }}>🤔 단어 분석 중...</div>
         ) : (
@@ -935,7 +1080,7 @@ function StepBuildScreen({ go, nav, items, setStudyDays }) {
             </>
           ) : (
             <button onClick={handleNext} style={{ ...S.btn, flex: 1, background: C.primary, color: "#fff", padding: 14, fontSize: 15 }}>
-              {idx < lessonItems.length - 1 ? "다음 →" : "완료 → 퀴즈"}
+              {idx < lessonItems.length - 1 ? "다음 →" : "완료 → Speaking Test"}
             </button>
           )}
         </div>
@@ -944,7 +1089,8 @@ function StepBuildScreen({ go, nav, items, setStudyDays }) {
   );
 }
 
-// ─── StepQuizScreen ───────────────────────────────────────────────────────────
+// ─── StepQuizScreen (=Speaking Test) ─────────────────────────────────────────
+// 6번: 명칭 변경, 3번: 마이크 자동 재시작
 function StepQuizScreen({ go, nav, items, progress, setProgress, setStudyDays, quizProgress, setQuizProgress }) {
   const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
   const saveKey = `${nav.lessonId}_${nav.sourceId}`;
@@ -955,25 +1101,55 @@ function StepQuizScreen({ go, nav, items, progress, setProgress, setStudyDays, q
   const [listening, setListening] = useState(false);
   const [done, setDone] = useState(false);
   const recRef = useRef(null);
+  const restartTimerRef = useRef(null);
 
-  useEffect(() => { return () => { stopSpeak(); recRef.current?.stop(); }; }, []);
+  useEffect(() => { return () => { stopSpeak(); recRef.current?.stop(); clearTimeout(restartTimerRef.current); }; }, []);
 
+  // 3번: 음성 끊겨도 자동 재시작
   const startMic = () => {
     stopSpeak();
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { alert("Chrome을 사용해주세요."); return; }
-    const r = new SR(); r.lang = "en-US"; r.continuous = true; r.interimResults = false;
-    r.onresult = e => {
-      const result = e.results[e.results.length - 1];
-      if (!result || !result[0]) return;
-      const said = result[0].transcript;
-      if (!said.trim()) return;
-      setAnswer(said);
+
+    const startRec = () => {
+      const r = new SR();
+      r.lang = "en-US"; r.continuous = true; r.interimResults = false;
+      r.onresult = e => {
+        const result = e.results[e.results.length - 1];
+        if (!result || !result[0]) return;
+        const said = result[0].transcript;
+        if (!said.trim()) return;
+        setAnswer(said);
+      };
+      r.onend = () => {
+        if (recRef.current === r) {
+          restartTimerRef.current = setTimeout(() => {
+            if (recRef.current === r) {
+              try { r.start(); } catch(e) {}
+            }
+          }, 200);
+        }
+      };
+      r.onerror = (e) => {
+        if (e.error === "aborted" || e.error === "not-allowed") {
+          setListening(false);
+          recRef.current = null;
+        }
+      };
+      r.start();
+      recRef.current = r;
+      setListening(true);
     };
-    r.onerror = () => setListening(false);
-    r.start(); recRef.current = r; setListening(true);
+    startRec();
   };
-  const stopMic = () => { recRef.current?.stop(); setListening(false); };
+
+  const stopMic = () => {
+    clearTimeout(restartTimerRef.current);
+    const r = recRef.current;
+    recRef.current = null;
+    r?.stop();
+    setListening(false);
+  };
 
   const checkAnswer = () => {
     const expected = lessonItems[quizIdx].English.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
@@ -1003,9 +1179,10 @@ function StepQuizScreen({ go, nav, items, progress, setProgress, setStudyDays, q
   if (done) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
       <img src={duck2Img} width={120} height={120} alt="완료" style={{ marginBottom: 24, objectFit: "contain" }} />
-      <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>퀴즈 완료!</div>
+      <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>Speaking Test 완료!</div>
       <div style={{ color: C.sub, fontSize: 14, marginBottom: 32 }}>{lessonItems.length}문장 모두 완료했어요 🎉</div>
-      <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.primary, color: "#fff", width: "100%", maxWidth: 320, padding: 16, fontSize: 15 }}>← 레슨으로</button>
+      <button onClick={() => go("stepDiary", nav)} style={{ ...S.btn, background: "#7C3AED", color: "#fff", width: "100%", maxWidth: 320, padding: 16, fontSize: 15, marginBottom: 12 }}>📓 Diary 쓰기 →</button>
+      <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, width: "100%", maxWidth: 320, padding: 14, fontSize: 14 }}>← 레슨으로</button>
     </div>
   );
 
@@ -1013,11 +1190,11 @@ function StepQuizScreen({ go, nav, items, progress, setProgress, setStudyDays, q
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
-        {/* 3번, 4번 */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
           <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
-          <div style={{ fontSize: 13, color: C.text, fontWeight: 700, flex: 1 }}>✍️ 퀴즈 {quizIdx + 1}/{lessonItems.length}</div>
-          <button onClick={() => { stopSpeak(); recRef.current?.stop(); go("home"); }} style={S.quitBtn}>그만하기</button>
+          {/* 6번: Speaking Test */}
+          <div style={{ fontSize: 13, color: C.text, fontWeight: 700, flex: 1 }}>🎤 Speaking Test {quizIdx + 1}/{lessonItems.length}</div>
+          <button onClick={() => { stopSpeak(); stopMic(); go("lessonSteps"); }} style={S.quitBtn}>그만하기</button>
         </div>
         <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 12 }}>
           <div style={{ height: "100%", width: `${Math.round((quizIdx / lessonItems.length) * 100)}%`, background: C.primary, borderRadius: 99, transition: "width 0.3s" }} />
@@ -1045,19 +1222,99 @@ function StepQuizScreen({ go, nav, items, progress, setProgress, setStudyDays, q
           </>
         ) : (
           <>
-            {/* 10번: OX 위로 - justifyContent flex-start + paddingTop */}
-            <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.success : C.danger}`, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
-              <div style={{ fontSize: 56, marginBottom: 20 }}>{correct ? "⭕" : "❌"}</div>
+            {/* 11번: 차분한 OX 색상 */}
+            <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}`, background: correct ? C.successBg : C.dangerBg, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
+              <div style={{ fontSize: 52, marginBottom: 20, color: correct ? C.successText : C.dangerText }}>{correct ? "✓" : "✗"}</div>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6, marginBottom: 8 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 13 }}>내 답: {answer}</div>}
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginTop: 16 }}>🔊 정답 듣기</button>
             </div>
             <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 13 }}>✗ 다시 학습</button>
-              <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: "#DCFCE7", color: C.success, fontSize: 14 }}>✓ 다음</button>
+              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: C.dangerBg, color: C.dangerText, fontSize: 13, border: `1px solid ${C.dangerBorder}` }}>✗ 다시 학습</button>
+              <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: C.successBg, color: C.successText, fontSize: 14, border: `1px solid ${C.successBorder}` }}>✓ 다음</button>
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── StepDiaryScreen: Diary 작성 ──────────────────────────────────────────────
+// 8번: 레슨 학습 후 다이어리 작성 화면
+function StepDiaryScreen({ go, nav, lessons, sources, items, diaries, setDiaries, setStepDone }) {
+  const lesson = lessons.find(l => l.LessonID === nav.lessonId && l.SourceID === nav.sourceId);
+  const src = sources.find(s => s.SourceID === nav.sourceId);
+  const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
+  const [content, setContent] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    if (!content.trim()) return;
+    // 10번: 건건마다 중복 저장 허용
+    const newDiary = {
+      id: `${nav.lessonId}_${nav.sourceId}_${Date.now()}`,
+      lessonId: nav.lessonId,
+      sourceId: nav.sourceId,
+      lessonTitle: lesson?.Title || "",
+      sourceName: src?.Name || "",
+      content: content.trim(),
+      date: today(),
+      createdAt: new Date().toISOString(),
+    };
+    // 7번: 다이어리 완료 표시
+    const saveKey = `${nav.lessonId}_${nav.sourceId}`;
+    setStepDone(prev => ({ ...prev, [saveKey]: { ...(prev[saveKey] || {}), diary: true } }));
+    setDiaries(prev => [newDiary, ...prev]);
+    setSaved(true);
+  };
+
+  if (saved) return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>📓</div>
+      <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>저장됐어요!</div>
+      <div style={{ color: C.sub, fontSize: 14, marginBottom: 32, textAlign: "center" }}>오늘의 학습 기록이 다이어리에 남았어요</div>
+      <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.primary, color: "#fff", width: "100%", maxWidth: 320, padding: 16, fontSize: 15 }}>← 레슨으로</button>
+    </div>
+  );
+
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1 }}>📓 Diary</div>
+          <button onClick={() => go("lessonSteps")} style={S.quitBtn}>건너뛰기</button>
+        </div>
+
+        <div style={{ ...S.card, marginBottom: 16, borderLeft: `4px solid #7C3AED` }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 2 }}>{lesson?.Title}</div>
+          <div style={{ fontSize: 12, color: C.sub }}>{src?.Name}</div>
+        </div>
+
+        <div style={{ ...S.card, marginBottom: 16, padding: "14px 16px" }}>
+          <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, marginBottom: 8 }}>오늘 배운 표현들</div>
+          {lessonItems.slice(0, 3).map(item => (
+            <div key={item.ItemID} style={{ fontSize: 13, color: C.text, marginBottom: 4 }}>• {item.English}</div>
+          ))}
+          {lessonItems.length > 3 && <div style={{ fontSize: 12, color: C.sub }}>외 {lessonItems.length - 3}개...</div>}
+        </div>
+
+        <div style={{ ...S.card, marginBottom: 16, padding: "14px 16px" }}>
+          <div style={{ fontSize: 13, color: C.sub, marginBottom: 10 }}>오늘 배운 내용을 활용해서 자유롭게 글을 써보세요. 짧아도 괜찮아요! ✍️</div>
+          <textarea
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            placeholder="오늘 배운 표현을 써봐요..."
+            style={{ ...S.input, resize: "none", fontSize: 15, padding: "12px", lineHeight: 1.7, minHeight: 160 }}
+          />
+          <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textAlign: "right" }}>{content.length}자</div>
+        </div>
+
+        <button onClick={handleSave} disabled={!content.trim()}
+          style={{ ...S.btn, width: "100%", background: content.trim() ? "#7C3AED" : C.border, color: content.trim() ? "#fff" : C.sub, padding: 14, fontSize: 15, opacity: content.trim() ? 1 : 0.5 }}>
+          저장하기 📓
+        </button>
       </div>
     </div>
   );
@@ -1076,8 +1333,9 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
   const [correct, setCorrect] = useState(false);
   const [listening, setListening] = useState(false);
   const recRef = useRef(null);
+  const restartTimerRef = useRef(null);
 
-  useEffect(() => { return () => { stopSpeak(); recRef.current?.stop(); }; }, []);
+  useEffect(() => { return () => { stopSpeak(); recRef.current?.stop(); clearTimeout(restartTimerRef.current); }; }, []);
 
   if (idx >= reviewItems.length) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
@@ -1089,22 +1347,42 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
   );
 
   const item = reviewItems[idx];
+
+  // 3번: 자동 재시작 마이크
   const startMic = () => {
     stopSpeak();
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
-    const r = new SR(); r.lang = "en-US"; r.continuous = true; r.interimResults = false;
-    r.onresult = e => {
-      const result = e.results[e.results.length - 1];
-      if (!result || !result[0]) return;
-      const said = result[0].transcript;
-      if (!said.trim()) return;
-      setAnswer(said);
+    const startRec = () => {
+      const r = new SR(); r.lang = "en-US"; r.continuous = true; r.interimResults = false;
+      r.onresult = e => {
+        const result = e.results[e.results.length - 1];
+        if (!result || !result[0]) return;
+        const said = result[0].transcript;
+        if (!said.trim()) return;
+        setAnswer(said);
+      };
+      r.onend = () => {
+        if (recRef.current === r) {
+          restartTimerRef.current = setTimeout(() => {
+            if (recRef.current === r) { try { r.start(); } catch(e) {} }
+          }, 200);
+        }
+      };
+      r.onerror = (e) => {
+        if (e.error === "aborted" || e.error === "not-allowed") { setListening(false); recRef.current = null; }
+      };
+      r.start(); recRef.current = r; setListening(true);
     };
-    r.onerror = () => setListening(false);
-    r.start(); recRef.current = r; setListening(true);
+    startRec();
   };
-  const stopMic = () => { recRef.current?.stop(); setListening(false); };
+
+  const stopMic = () => {
+    clearTimeout(restartTimerRef.current);
+    const r = recRef.current; recRef.current = null;
+    r?.stop(); setListening(false);
+  };
+
   const checkAnswer = () => {
     const expected = item.English.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
     const given = answer.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
@@ -1121,7 +1399,7 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
     setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
     setIdx(p => p + 1); setAnswer(""); setSubmitted(false); setCorrect(false);
   };
-  const handleQuit = () => { stopSpeak(); recRef.current?.stop(); setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]); go("home"); };
+  const handleQuit = () => { stopSpeak(); stopMic(); setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]); go("home"); };
 
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
@@ -1137,7 +1415,7 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
           </div>
           <div style={{ fontSize: 11, color: C.sub, textAlign: "right", marginTop: 3 }}>{Math.round((idx / reviewItems.length) * 100)}% 완료</div>
         </div>
-        <div style={{ ...S.card, marginBottom: 12, background: "#FEF9C3", border: `1px solid ${C.warn}`, padding: "8px 14px" }}>
+        <div style={{ ...S.card, marginBottom: 12, background: "#FFFBEB", border: `1px solid #FDE68A`, padding: "8px 14px" }}>
           <div style={{ fontSize: 11, color: C.warn, fontWeight: 700 }}>🔁 에빙하우스 복습</div>
           <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{item.lessonTitle}</div>
         </div>
@@ -1164,16 +1442,16 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
           </>
         ) : (
           <>
-            {/* 10번: OX 위로 */}
-            <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.success : C.danger}`, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
-              <div style={{ fontSize: 56, marginBottom: 20 }}>{correct ? "⭕" : "❌"}</div>
+            {/* 11번: 차분한 OX */}
+            <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}`, background: correct ? C.successBg : C.dangerBg, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
+              <div style={{ fontSize: 52, marginBottom: 20, color: correct ? C.successText : C.dangerText }}>{correct ? "✓" : "✗"}</div>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 13, marginTop: 8 }}>내 답: {answer}</div>}
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginTop: 16 }}>🔊 정답 듣기</button>
             </div>
             <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 13 }}>✗ 다시 학습</button>
-              <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: "#DCFCE7", color: C.success, fontSize: 14 }}>✓ 다음</button>
+              <button onClick={() => recordResult("x")} style={{ ...S.btn, flex: 1, background: C.dangerBg, color: C.dangerText, fontSize: 13, border: `1px solid ${C.dangerBorder}` }}>✗ 다시 학습</button>
+              <button onClick={() => recordResult("o")} style={{ ...S.btn, flex: 1, background: C.successBg, color: C.successText, fontSize: 14, border: `1px solid ${C.successBorder}` }}>✓ 다음</button>
             </div>
           </>
         )}
@@ -1304,8 +1582,9 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setProgress, setStu
   const [correct, setCorrect] = useState(false);
   const [listening, setListening] = useState(false);
   const recRef = useRef(null);
+  const restartTimerRef = useRef(null);
 
-  useEffect(() => { return () => { stopSpeak(); recRef.current?.stop(); }; }, []);
+  useEffect(() => { return () => { stopSpeak(); recRef.current?.stop(); clearTimeout(restartTimerRef.current); }; }, []);
 
   if (shuffled.length === 0) return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
@@ -1326,22 +1605,42 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setProgress, setStu
   );
 
   const item = shuffled[idx];
+
+  // 3번: 자동 재시작 마이크
   const startMic = () => {
     stopSpeak();
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
-    const r = new SR(); r.lang = "en-US"; r.continuous = true; r.interimResults = false;
-    r.onresult = e => {
-      const result = e.results[e.results.length - 1];
-      if (!result || !result[0]) return;
-      const said = result[0].transcript;
-      if (!said.trim()) return;
-      setAnswer(said);
+    const startRec = () => {
+      const r = new SR(); r.lang = "en-US"; r.continuous = true; r.interimResults = false;
+      r.onresult = e => {
+        const result = e.results[e.results.length - 1];
+        if (!result || !result[0]) return;
+        const said = result[0].transcript;
+        if (!said.trim()) return;
+        setAnswer(said);
+      };
+      r.onend = () => {
+        if (recRef.current === r) {
+          restartTimerRef.current = setTimeout(() => {
+            if (recRef.current === r) { try { r.start(); } catch(e) {} }
+          }, 200);
+        }
+      };
+      r.onerror = (e) => {
+        if (e.error === "aborted" || e.error === "not-allowed") { setListening(false); recRef.current = null; }
+      };
+      r.start(); recRef.current = r; setListening(true);
     };
-    r.onerror = () => setListening(false);
-    r.start(); recRef.current = r; setListening(true);
+    startRec();
   };
-  const stopMic = () => { recRef.current?.stop(); setListening(false); };
+
+  const stopMic = () => {
+    clearTimeout(restartTimerRef.current);
+    const r = recRef.current; recRef.current = null;
+    r?.stop(); setListening(false);
+  };
+
   const checkAnswer = () => {
     const expected = item.English.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
     const given = answer.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
@@ -1358,13 +1657,11 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setProgress, setStu
     setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]);
     setIdx(p => p + 1); setAnswer(""); setSubmitted(false); setCorrect(false);
   };
-  // 1번: 그만하기
-  const handleQuit = () => { stopSpeak(); recRef.current?.stop(); setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]); go("favoriteList"); };
+  const handleQuit = () => { stopSpeak(); stopMic(); setStudyDays(prev => prev.includes(today()) ? prev : [...prev, today()]); go("favoriteList"); };
 
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
-        {/* 1번: 그만하기 버튼 */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <button onClick={() => go("favoriteList")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 목록</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>⭐ 랜덤 QUIZ</div>
@@ -1402,19 +1699,90 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setProgress, setStu
           </>
         ) : (
           <>
-            {/* 10번: OX 위로 */}
-            <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.success : C.danger}`, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
-              <div style={{ fontSize: 56, marginBottom: 20 }}>{correct ? "⭕" : "❌"}</div>
+            {/* 11번: 차분한 OX */}
+            <div style={{ ...S.card, flex: 1, border: `2px solid ${correct ? C.successBorder : C.dangerBorder}`, background: correct ? C.successBg : C.dangerBg, marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", textAlign: "center", paddingTop: 36 }}>
+              <div style={{ fontSize: 52, marginBottom: 20, color: correct ? C.successText : C.dangerText }}>{correct ? "✓" : "✗"}</div>
               <div style={{ fontWeight: 700, color: C.text, fontSize: 16, lineHeight: 1.6, marginBottom: 8 }}>{item.English}</div>
               {answer && <div style={{ color: C.sub, fontSize: 13 }}>내 답: {answer}</div>}
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.pill, color: C.primary, fontSize: 13, marginTop: 16 }}>🔊 정답 듣기</button>
             </div>
             <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => next("x")} style={{ ...S.btn, flex: 1, background: "#FEE2E2", color: C.danger, fontSize: 13 }}>✗ 다시 학습</button>
-              <button onClick={() => next("o")} style={{ ...S.btn, flex: 1, background: "#DCFCE7", color: C.success, fontSize: 14 }}>✓ 다음</button>
+              <button onClick={() => next("x")} style={{ ...S.btn, flex: 1, background: C.dangerBg, color: C.dangerText, fontSize: 13, border: `1px solid ${C.dangerBorder}` }}>✗ 다시 학습</button>
+              <button onClick={() => next("o")} style={{ ...S.btn, flex: 1, background: C.successBg, color: C.successText, fontSize: 14, border: `1px solid ${C.successBorder}` }}>✓ 다음</button>
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── DiaryListScreen ──────────────────────────────────────────────────────────
+// 8번: 다이어리 목록 (홈 화면에서 진입)
+function DiaryListScreen({ go, diaries, setDiaries }) {
+  // 9번: 최신순 정렬
+  const sorted = [...diaries].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  if (sorted.length === 0) return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>📓</div>
+      <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 8 }}>아직 일기가 없어요</div>
+      <div style={{ color: C.sub, fontSize: 14, marginBottom: 32, textAlign: "center" }}>레슨을 마친 후 Diary를 작성해보세요</div>
+      <button onClick={() => go("home")} style={{ ...S.btn, background: C.primary, color: "#fff", padding: "12px 28px" }}>홈으로</button>
+    </div>
+  );
+
+  return (
+    <div style={S.page}>
+      <div style={S.pageInner}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <button onClick={() => go("home")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 홈</button>
+          <div style={{ fontWeight: 700, fontSize: 16, flex: 1 }}>📓 내 다이어리</div>
+          <div style={{ fontSize: 13, color: C.sub }}>{sorted.length}개</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {sorted.map(diary => (
+            <div key={diary.id} onClick={() => go("diaryDetail", { diaryId: diary.id })}
+              style={{ ...S.card, cursor: "pointer", borderLeft: `3px solid #7C3AED`, padding: "14px 16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                {/* 8번: 날짜, 교재명, 레슨명 */}
+                <div style={{ fontSize: 11, color: C.sub }}>{diary.date} · {diary.sourceName}</div>
+                <button onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm("이 다이어리를 삭제할까요?")) {
+                    setDiaries(prev => prev.filter(d => d.id !== diary.id));
+                  }
+                }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: C.sub, padding: "2px 4px" }}>🗑️</button>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 4 }}>{diary.lessonTitle}</div>
+              <div style={{ fontSize: 13, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{diary.content}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DiaryDetailScreen ────────────────────────────────────────────────────────
+function DiaryDetailScreen({ go, nav, diaries }) {
+  const diary = diaries.find(d => d.id === nav.diaryId);
+  if (!diary) return <Center>일기를 찾을 수 없어요</Center>;
+
+  return (
+    <div style={S.page}>
+      <div style={S.pageInner}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <button onClick={() => go("diaryList")} style={{ ...S.btn, background: C.pill, color: C.primary, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
+          <div style={{ fontWeight: 700, fontSize: 15, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{diary.lessonTitle}</div>
+        </div>
+        <div style={{ ...S.card, marginBottom: 16, borderLeft: `4px solid #7C3AED` }}>
+          <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>{diary.date} · {diary.sourceName}</div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: C.text }}>{diary.lessonTitle}</div>
+        </div>
+        <div style={{ ...S.card, padding: "20px" }}>
+          <div style={{ fontSize: 16, color: C.text, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{diary.content}</div>
+        </div>
       </div>
     </div>
   );

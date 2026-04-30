@@ -699,7 +699,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   useEffect(() => {
     const saved = quizProgress[saveKey];
     console.log("📥 LessonSteps 진입:", { saveKey, saved, fromHome: nav.fromHome, allQuizProgress: quizProgress });
-    if (nav.fromHome && saved && saved !== "done" && saved !== "preview") {
+    if (nav.fromHome && saved && saved !== "done") {
       setShowResumePopup(true);
     }
   }, [saveKey, quizProgress, nav.fromHome]);

@@ -696,12 +696,13 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
 
   // 2번: 이어하기 팝업
   const [showResumePopup, setShowResumePopup] = useState(false);
+  const [checkedResume, setCheckedResume] = useState(false);
   useEffect(() => {
     const saved = quizProgress[saveKey];
-    console.log("📥 LessonSteps 진입:", { saveKey, saved, fromHome: nav.fromHome, allQuizProgress: quizProgress });
-    if (nav.fromHome && saved && saved !== "done") {
+    if (!checkedResume && nav.fromHome && saved && saved !== "done") {
       setShowResumePopup(true);
     }
+    setCheckedResume(true);
   }, [saveKey, quizProgress, nav.fromHome]);
 
   const extractYouTubeId = (url) => {

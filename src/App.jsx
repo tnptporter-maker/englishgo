@@ -698,10 +698,11 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   const [showResumePopup, setShowResumePopup] = useState(false);
   useEffect(() => {
     const saved = quizProgress[saveKey];
-    if (nav.fromHome && saved && saved !== "done") {
+    console.log("📥 LessonSteps 진입:", { saveKey, saved, fromHome: nav.fromHome, allQuizProgress: quizProgress });
+    if (nav.fromHome && saved && saved !== "done" && saved !== "preview") {
       setShowResumePopup(true);
     }
-  }, []);
+  }, [saveKey, quizProgress, nav.fromHome]);
 
   const extractYouTubeId = (url) => {
     if (!url) return null;

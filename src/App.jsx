@@ -696,15 +696,13 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
 
   // 2번: 이어하기 팝업
   const [showResumePopup, setShowResumePopup] = useState(false);
-  const resumeCheckedRef = useRef(false);
   useEffect(() => {
-    if (resumeCheckedRef.current) return;
+    if (nav.quitReturn) return;
     const saved = quizProgress[saveKey];
     if (nav.fromHome && saved && saved !== "done") {
       setShowResumePopup(true);
     }
-    resumeCheckedRef.current = true;
-  }, [saveKey, quizProgress, nav.fromHome]);
+  }, [saveKey, quizProgress, nav.fromHome, nav.quitReturn]);
 
   const extractYouTubeId = (url) => {
     if (!url) return null;
@@ -809,7 +807,7 @@ function StepVideoScreen({ go, nav, lessons, setStepDone }) {
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
-          <button onClick={() => go("lessonSteps")} style={S.quitBtn}>그만하기</button>
+          <button onClick={() => go("lessonSteps", { quitReturn: true })} style={S.quitBtn}>그만하기</button>
         </div>
         {ytId ? (
           <>
@@ -950,7 +948,7 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, se
           <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <div style={{ fontSize: 12, color: C.sub, flexShrink: 0 }}>{currentNum}/{totalItems}</div>
-          <button onClick={() => { stopSpeak(); stopRepeat(); go("lessonSteps"); }} style={S.quitBtn}>그만하기</button>
+          <button onClick={() => { stopSpeak(); stopRepeat(); go("lessonSteps", { quitReturn: true }); }} style={S.quitBtn}>그만하기</button>
         </div>
         <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 12 }}>
           <div style={{ height: "100%", width: `${Math.round((currentNum / totalItems) * 100)}%`, background: C.primary, borderRadius: 99, transition: "width 0.3s" }} />
@@ -1052,7 +1050,7 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
           <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontWeight: 700, fontSize: 14, flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <div style={{ fontSize: 12, color: C.sub, flexShrink: 0 }}>{idx + 1}/{lessonItems.length}</div>
-          <button onClick={() => go("lessonSteps")} style={S.quitBtn}>그만하기</button>
+          <button onClick={() => go("lessonSteps", { quitReturn: true })} style={S.quitBtn}>그만하기</button>
         </div>
         <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 16 }}>
           <div style={{ height: "100%", width: `${Math.round((idx / lessonItems.length) * 100)}%`, background: C.yellow, borderRadius: 99, transition: "width 0.3s" }} />
@@ -1222,7 +1220,7 @@ function StepQuizScreen({ go, nav, items, lessons, progress, setProgress, setStu
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
           <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
           <div style={{ fontSize: 14, color: C.text, fontWeight: 700, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
-          <button onClick={() => { stopSpeak(); stopMic(); go("lessonSteps"); }} style={S.quitBtn}>그만하기</button>
+          <button onClick={() => { stopSpeak(); stopMic(); go("lessonSteps", { quitReturn: true }); }} style={S.quitBtn}>그만하기</button>
         </div>
         <div style={{ height: 6, background: C.border, borderRadius: 99, overflow: "hidden", marginBottom: 14 }}>
           <div style={{ height: "100%", width: `${Math.round((quizIdx / lessonItems.length) * 100)}%`, background: C.primary, borderRadius: 99, transition: "width 0.3s" }} />

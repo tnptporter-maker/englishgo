@@ -644,7 +644,7 @@ function LessonScreen({ go, nav, sources, lessons, items, progress }) {
             const studied = lessonItems.filter(i => progress[i.ItemID]?.history?.length > 0).length;
             return (
               <div key={lesson.LessonID + lesson.SourceID}
-                onClick={() => go("lessonSteps", { lessonId: lesson.LessonID, sourceId: lesson.SourceID })}
+                onClick={() => go("lessonSteps", { lessonId: lesson.LessonID, sourceId: lesson.SourceID, catId: nav.catId })}
                 style={{ ...S.card, display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
                 <div style={{ flex: 1 }}>
                   <div style={S.listTitle}>{lesson.Title}</div>
@@ -713,7 +713,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <button onClick={() => go(backScreen)} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
         </div>
         <div style={{ ...S.card, marginBottom: 20, borderLeft: `4px solid ${C.yellow}`, background: C.yellowLight }}>
           <div style={{ fontSize: 13, color: C.sub }}>{src?.Name} · {lessonItems.length}문장 {studiedCount > 0 ? `· ${studiedCount}개 학습됨` : ""}</div>
@@ -770,7 +770,7 @@ function StepVideoScreen({ go, nav, lessons, setStepDone }) {
       <div style={S.pageInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <button onClick={() => go("lessonSteps", { quitReturn: true })} style={S.quitBtn}>그만하기</button>
         </div>
         {ytId ? (
@@ -795,8 +795,18 @@ function StepVideoScreen({ go, nav, lessons, setStepDone }) {
 }
 
 // ─── StepReadScreen: 따라읽기 ─────────────────────────────────────────────────
-function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, setQuizProgress }) {
-  const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
+function StepReadScreen({ go, nav, lessons, items, sources, categories, setStudyDays, setStepDone, setQuizProgress }) {
+  const rawItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
+  const isOPIc = (() => {
+    const src = sources.find(s => s.SourceID === nav.sourceId);
+    const cat = src ? categories.find(c => c.CategoryID === src.CategoryID) : null;
+    return cat?.Name === "OPIc";
+  })();
+  const [shuffledItems] = useState(() => {
+    if (!isOPIc) return rawItems;
+    return [...rawItems].sort(() => Math.random() - 0.5);
+  });
+  const lessonItems = isOPIc ? shuffledItems : rawItems;
   const lesson = lessons.find(l => l.LessonID === nav.lessonId && l.SourceID === nav.sourceId);
   const saveKey = `${nav.lessonId}_${nav.sourceId}`;
   const [idx, setIdx] = useState(0);
@@ -849,7 +859,7 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, se
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <button onClick={() => { stopMic(); go("lessonSteps"); }} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <div style={{ fontSize: 12, color: C.sub, flexShrink: 0 }}>{currentNum}/{totalItems}</div>
           <button onClick={() => { stopSpeak(); stopMic(); go("lessonSteps", { quitReturn: true }); }} style={S.quitBtn}>그만하기</button>
         </div>
@@ -877,9 +887,9 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, se
           )}
           {spokenThisCard && <div style={{ marginTop: 6, fontSize: 12, color: C.sub }}>Speaking 완료 ✓</div>}
         </div>
-        <button onClick={handleNext} disabled={!spokenThisCard}
-          style={{ ...S.btn, width: "100%", background: spokenThisCard ? C.primary : C.border, color: spokenThisCard ? "#fff" : C.sub, padding: 14, fontSize: 15, opacity: spokenThisCard ? 1 : 0.5 }}>
-          {!spokenThisCard ? "🎤 Speaking 후 다음으로" : idx < lessonItems.length - 1 ? "다음 문장 →" : round === 1 ? "2회차 시작 →" : "완료 → 영작하기"}
+        <button onClick={handleNext}
+          style={{ ...S.btn, width: "100%", background: C.primary, color: "#fff", padding: 14, fontSize: 15 }}>
+          {idx < lessonItems.length - 1 ? "다음 문장 →" : round === 1 ? "2회차 시작 →" : "완료 → 영작하기"}
         </button>
       </div>
     </div>
@@ -887,8 +897,18 @@ function StepReadScreen({ go, nav, lessons, items, setStudyDays, setStepDone, se
 }
 
 // ─── StepBuildScreen: 문장 만들기 ────────────────────────────────────────────
-function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, setQuizProgress }) {
-  const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
+function StepBuildScreen({ go, nav, items, lessons, sources, categories, setStudyDays, setStepDone, setQuizProgress }) {
+  const rawItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
+  const isOPIc = (() => {
+    const src = sources.find(s => s.SourceID === nav.sourceId);
+    const cat = src ? categories.find(c => c.CategoryID === src.CategoryID) : null;
+    return cat?.Name === "OPIc";
+  })();
+  const [shuffledItems] = useState(() => {
+    if (!isOPIc) return rawItems;
+    return [...rawItems].sort(() => Math.random() - 0.5);
+  });
+  const lessonItems = isOPIc ? shuffledItems : rawItems;
   const lesson = lessons.find(l => l.LessonID === nav.lessonId && l.SourceID === nav.sourceId);
   const saveKey = `${nav.lessonId}_${nav.sourceId}`;
   const [idx, setIdx] = useState(0);
@@ -1014,11 +1034,25 @@ function StepBuildScreen({ go, nav, items, lessons, setStudyDays, setStepDone, s
 }
 
 // ─── StepQuizScreen (Speaking Test) ──────────────────────────────────────────
-function StepQuizScreen({ go, nav, items, lessons, progress, setProgress, setStudyDays, quizProgress, setQuizProgress }) {
-  const lessonItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
+function StepQuizScreen({ go, nav, items, lessons, sources, categories, progress, setProgress, setStudyDays, quizProgress, setQuizProgress }) {
+  const rawItems = items.filter(i => i.LessonID === nav.lessonId && i.SourceID === nav.sourceId);
+  const isOPIc = (() => {
+    const src = sources.find(s => s.SourceID === nav.sourceId);
+    const cat = src ? categories.find(c => c.CategoryID === src.CategoryID) : null;
+    return cat?.Name === "OPIc";
+  })();
+  const [shuffledItems] = useState(() => {
+    if (!isOPIc) return rawItems;
+    return [...rawItems].sort(() => Math.random() - 0.5);
+  });
+  const lessonItems = isOPIc ? shuffledItems : rawItems;
   const lesson = lessons.find(l => l.LessonID === nav.lessonId && l.SourceID === nav.sourceId);
   const saveKey = `${nav.lessonId}_${nav.sourceId}`;
-  const [quizIdx, setQuizIdx] = useState(0);
+  const [quizIdx, setQuizIdx] = useState(() => {
+    const saved = quizProgress[saveKey];
+    if (saved && !isNaN(Number(saved))) return Number(saved);
+    return 0;
+  });
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [correct, setCorrect] = useState(false);
@@ -1129,7 +1163,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, diaries, setDiaries, setSt
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 24px", maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <button onClick={() => go("lessonSteps")} style={{ ...S.btn, background: C.yellowLight, color: C.text, padding: "8px 14px", flexShrink: 0 }}>← 뒤로</button>
-          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lesson?.Title}</div>
           <button onClick={() => go("lessonSteps")} style={S.quitBtn}>건너뛰기</button>
         </div>
         <div style={{ ...S.card, marginBottom: 16, borderLeft: `4px solid ${C.yellow}`, background: C.yellowLight }}>
@@ -1211,21 +1245,19 @@ function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
         </div>
         {!submitted ? (
           <>
-            <div style={{ ...S.card, marginBottom: 12, padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ color: C.sub, fontSize: 11, marginBottom: 6, fontWeight: 600 }}>영어로 작성하세요</div>
+            <div style={{ ...S.card, marginBottom: 12, padding: "16px", textAlign: "center" }}>
+              <div style={{ color: C.sub, fontSize: 11, marginBottom: 6, fontWeight: 600 }}>다음을 영어로 작성하세요</div>
               <div style={{ fontSize: 17, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{item.Korean}</div>
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, fontSize: 12, padding: "6px 14px", marginTop: 10 }}>🔊 정답 듣기</button>
             </div>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", marginBottom: 12 }}>
-              <textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="영어로 입력하세요..."
-                style={{ ...S.input, flex: 1, resize: "none", fontSize: 16, padding: "14px", lineHeight: 1.6, minHeight: 120 }} />
-            </div>
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 12 }}>
               {!listening
-                ? <button onClick={startMic} style={{ ...S.btn, width: "100%", background: "#FEF3C7", color: "#92400E", fontSize: 14 }}>🎤 마이크로 입력</button>
-                : <button onClick={stopMic} style={{ ...S.btn, width: "100%", background: "#FEE2E2", color: C.danger, fontSize: 14 }}>⏹ 녹음 완료</button>}
+                ? <button onClick={startMic} style={{ ...S.btn, width: "100%", background: "#FEF3C7", color: "#92400E", fontSize: 16, padding: "14px", fontWeight: 800 }}>🎤 Speaking</button>
+                : <button onClick={stopMic} style={{ ...S.btn, width: "100%", background: "#FEE2E2", color: C.danger, fontSize: 16, padding: "14px", fontWeight: 800 }}>⏹ 녹음 완료</button>}
             </div>
-            <button onClick={checkAnswer} disabled={!answer.trim()} style={{ ...S.btn, width: "100%", background: C.primary, color: "#fff", opacity: !answer.trim() ? 0.4 : 1 }}>제출</button>
+            <textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="영어로 입력하세요..."
+              style={{ ...S.input, resize: "none", fontSize: 15, padding: "12px 14px", lineHeight: 1.6, minHeight: 72, marginBottom: 10 }} />
+            <button onClick={checkAnswer} disabled={!answer.trim()} style={{ ...S.btn, width: "100%", background: C.primary, color: "#fff", padding: 13, opacity: !answer.trim() ? 0.4 : 1 }}>제출</button>
           </>
         ) : (
           <>
@@ -1417,22 +1449,20 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setProgress, setStu
         </div>
         {!submitted ? (
           <>
-            <div style={{ ...S.card, marginBottom: 12, padding: "14px 16px", textAlign: "center" }}>
-              <div style={{ color: C.sub, fontSize: 11, marginBottom: 6, fontWeight: 600 }}>영어로 작성하세요</div>
+            <div style={{ ...S.card, marginBottom: 12, padding: "16px", textAlign: "center" }}>
+              <div style={{ color: C.sub, fontSize: 11, marginBottom: 6, fontWeight: 600 }}>다음을 영어로 작성하세요</div>
               <div style={{ fontSize: 17, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{item.Korean}</div>
               <button onClick={() => speak(item.English)} style={{ ...S.btn, background: C.yellowLight, color: C.yellowDark, fontSize: 12, padding: "6px 14px", marginTop: 10 }}>🔊 정답 듣기</button>
             </div>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", marginBottom: 12 }}>
-              <textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="영어로 입력하세요..."
-                style={{ ...S.input, flex: 1, resize: "none", fontSize: 16, padding: "14px", lineHeight: 1.6, minHeight: 120 }} />
-            </div>
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 12 }}>
               {!listening
-                ? <button onClick={startMic} style={{ ...S.btn, width: "100%", background: "#FEF3C7", color: "#92400E", fontSize: 14 }}>🎤 마이크로 입력</button>
-                : <button onClick={stopMic} style={{ ...S.btn, width: "100%", background: "#FEE2E2", color: C.danger, fontSize: 14 }}>⏹ 녹음 완료</button>}
+                ? <button onClick={startMic} style={{ ...S.btn, width: "100%", background: "#FEF3C7", color: "#92400E", fontSize: 16, padding: "14px", fontWeight: 800 }}>🎤 Speaking</button>
+                : <button onClick={stopMic} style={{ ...S.btn, width: "100%", background: "#FEE2E2", color: C.danger, fontSize: 16, padding: "14px", fontWeight: 800 }}>⏹ 녹음 완료</button>}
             </div>
+            <textarea value={answer} onChange={e => setAnswer(e.target.value)} placeholder="영어로 입력하세요..."
+              style={{ ...S.input, resize: "none", fontSize: 15, padding: "12px 14px", lineHeight: 1.6, minHeight: 72, marginBottom: 10 }} />
             <button onClick={() => { setCorrect(checkCorrect(item.English, answer)); setSubmitted(true); }} disabled={!answer.trim()}
-              style={{ ...S.btn, width: "100%", background: C.primary, color: "#fff", opacity: !answer.trim() ? 0.4 : 1 }}>제출</button>
+              style={{ ...S.btn, width: "100%", background: C.primary, color: "#fff", padding: 13, opacity: !answer.trim() ? 0.4 : 1 }}>제출</button>
           </>
         ) : (
           <>

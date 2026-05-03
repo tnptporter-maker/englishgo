@@ -673,7 +673,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
     if (nav.quitReturn) return;
     const saved = quizProgress[saveKey];
     // "preview", "build", 숫자 모두 이어하기 팝업 대상
-    if (nav.fromHome && saved && saved !== "done") setShowResumePopup(true);
+    if (saved && saved !== "done" && saved !== null) setShowResumePopup(true);
   }, [saveKey, quizProgress, nav.fromHome, nav.quitReturn]);
 
   const extractYouTubeId = (url) => {
@@ -698,8 +698,8 @@ function LessonStepsScreen({ go, nav, lessons, sources, items, progress, quizPro
   const handleResume = () => {
     setShowResumePopup(false);
     const saved = quizProgress[saveKey];
-    if (saved === "preview") go("stepRead", { ...nav, fromLesson: true });
-    else if (saved === "build") go("stepBuild", { ...nav, fromLesson: true });
+    if (typeof saved === "string" && saved.startsWith("preview")) go("stepRead", { ...nav, fromLesson: true });
+    else if (typeof saved === "string" && saved.startsWith("build")) go("stepBuild", { ...nav, fromLesson: true });
     else if (!isNaN(Number(saved))) go("stepQuiz", { ...nav, fromLesson: true });
   };
 
@@ -809,15 +809,29 @@ function StepReadScreen({ go, nav, lessons, items, sources, categories, setStudy
   const lessonItems = isOPIc ? shuffledItems : rawItems;
   const lesson = lessons.find(l => l.LessonID === nav.lessonId && l.SourceID === nav.sourceId);
   const saveKey = `${nav.lessonId}_${nav.sourceId}`;
-  const [idx, setIdx] = useState(0);
-  const [round, setRound] = useState(1);
+  const [idx, setIdx] = useState(() => {
+    const saved = quizProgress[saveKey];
+    if (saved && typeof saved === "string" && saved.startsWith("preview_")) {
+      const parts = saved.split("_");
+      return Number(parts[1]) || 0;
+    }
+    return 0;
+  });
+  const [round, setRound] = useState(() => {
+    const saved = quizProgress[saveKey];
+    if (saved && typeof saved === "string" && saved.startsWith("preview_")) {
+      const parts = saved.split("_");
+      return Number(parts[2]) || 1;
+    }
+    return 1;
+  });
   const [spokenThisCard, setSpokenThisCard] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const item = lessonItems[idx];
 
   useEffect(() => {
     setQuizProgress(prev => {
-      if (!prev[saveKey] || prev[saveKey] === null) return { ...prev, [saveKey]: "preview" };
+      if (!prev[saveKey] || prev[saveKey] === null) return { ...prev, [saveKey]: "preview_0_1" };
       return prev;
     });
   }, [saveKey]);
@@ -825,6 +839,7 @@ function StepReadScreen({ go, nav, lessons, items, sources, categories, setStudy
   useEffect(() => {
     setSpokenThisCard(false); setFeedback(null);
     stopSpeak();
+    setQuizProgress(prev => ({ ...prev, [saveKey]: `preview_${idx}_${round}` }));
     return () => stopSpeak();
   }, [idx, round]);
 
@@ -911,7 +926,13 @@ function StepBuildScreen({ go, nav, items, lessons, sources, categories, setStud
   const lessonItems = isOPIc ? shuffledItems : rawItems;
   const lesson = lessons.find(l => l.LessonID === nav.lessonId && l.SourceID === nav.sourceId);
   const saveKey = `${nav.lessonId}_${nav.sourceId}`;
-  const [idx, setIdx] = useState(0);
+  const [idx, setIdx] = useState(() => {
+    const saved = quizProgress[saveKey];
+    if (saved && typeof saved === "string" && saved.startsWith("build_")) {
+      return Number(saved.split("_")[1]) || 0;
+    }
+    return 0;
+  });
   const [chunks, setChunks] = useState(null);
   const [shuffledChunks, setShuffledChunks] = useState([]);
   const [selected, setSelected] = useState([]);
@@ -923,12 +944,17 @@ function StepBuildScreen({ go, nav, items, lessons, sources, categories, setStud
 
   // 진입 시 "build"로 저장 → 이어하기 팝업 감지용
   useEffect(() => {
-    setQuizProgress(prev => ({ ...prev, [saveKey]: prev[saveKey] === "done" ? "done" : "build" }));
+    setQuizProgress(prev => {
+      if (prev[saveKey] === "done") return prev;
+      if (prev[saveKey] && typeof prev[saveKey] === "string" && prev[saveKey].startsWith("build_")) return prev;
+      return { ...prev, [saveKey]: "build_0" };
+    });
   }, [saveKey]);
 
   useEffect(() => {
     if (!item) return;
     setChunks(null); setSelected([]); setSubmitted(false); setCorrect(false);
+    setQuizProgress(prev => ({ ...prev, [saveKey]: prev[saveKey] === "done" ? "done" : `build_${idx}` }));
     splitIntoChunks(item.English).then(result => {
       setChunks(result);
       const indices = result.map((_, i) => i);
@@ -1196,7 +1222,13 @@ function StudyScreen({ go, nav }) {
 
 // ─── ReviewScreen ─────────────────────────────────────────────────────────────
 function ReviewScreen({ go, reviewItems, setProgress, setStudyDays }) {
-  const [idx, setIdx] = useState(0);
+  const [idx, setIdx] = useState(() => {
+    const saved = quizProgress[saveKey];
+    if (saved && typeof saved === "string" && saved.startsWith("build_")) {
+      return Number(saved.split("_")[1]) || 0;
+    }
+    return 0;
+  });
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [correct, setCorrect] = useState(false);
@@ -1394,7 +1426,13 @@ function FavoriteQuizScreen({ go, items, lessons, favorites, setProgress, setStu
     return { ...i, lessonTitle: lesson?.Title || "", itemId: i.ItemID };
   });
   const [shuffled] = useState(() => [...favItems].sort(() => Math.random() - 0.5));
-  const [idx, setIdx] = useState(0);
+  const [idx, setIdx] = useState(() => {
+    const saved = quizProgress[saveKey];
+    if (saved && typeof saved === "string" && saved.startsWith("build_")) {
+      return Number(saved.split("_")[1]) || 0;
+    }
+    return 0;
+  });
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [correct, setCorrect] = useState(false);

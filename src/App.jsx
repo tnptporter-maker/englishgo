@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { initializeApp } from "firebase/app";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, deleteUser,
 } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 
-// ─── Firebase ─────────────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyAtCebZRWhwVnWfOREs1sU9BNyvQHPDtGI",
   authDomain: "quak-f5907.firebaseapp.com",
@@ -22,30 +21,31 @@ const googleProvider = new GoogleAuthProvider();
 const SHEET_ID = "1njMTapDCnpFP4mj6U0EEHPGumHfbBVWrljrX99_zUg0";
 const REVIEW_INTERVALS = [1, 3, 7, 14, 30, 90];
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
+// ─── 노란색 중심 디자인 토큰 ──────────────────────────────────────────────────
 const C = {
-  bg: "#F0F4FF",
+  bg: "#FFFDF5",           // 따뜻한 아이보리 배경
   card: "#FFFFFF",
-  primary: "#2D6BE4",
-  primaryDark: "#1A4FB5",
-  primaryLight: "#EEF3FF",
-  accent: "#E85D3A",
-  accentLight: "#FFF1EE",
+  primary: "#F59E0B",      // 노란색 주조
+  primaryDark: "#D97706",
+  primaryLight: "#FEF3C7",
+  accent: "#F97316",       // 주황색 포인트
+  accentLight: "#FFF7ED",
   green: "#22C55E",
   greenLight: "#F0FDF4",
-  text: "#0F172A",
-  sub: "#64748B",
-  border: "#E2E8F0",
-  borderLight: "#F1F5F9",
+  greenDark: "#16A34A",
+  text: "#1C1917",
+  sub: "#78716C",
+  border: "#E7E5E4",
+  borderLight: "#F5F5F4",
   success: "#22C55E",
   successBg: "#F0FDF4",
   successBorder: "#86EFAC",
   error: "#EF4444",
   errorBg: "#FEF2F2",
   errorBorder: "#FCA5A5",
-  done: "#7C3AED",
-  doneBg: "#F5F3FF",
-  doneBorder: "#C4B5FD",
+  done: "#16A34A",
+  doneBg: "#DCFCE7",
+  doneBorder: "#86EFAC",
 };
 
 const S = {
@@ -56,7 +56,7 @@ const S = {
   inner: { maxWidth: 480, margin: "0 auto", padding: "20px 16px 100px" },
   card: {
     background: C.card, borderRadius: 16,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.08),0 4px 16px rgba(0,0,0,0.04)",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04)",
     padding: "16px 20px", marginBottom: 12,
   },
   btn: {
@@ -65,9 +65,10 @@ const S = {
     transition: "all 0.15s", textAlign: "center",
   },
   btnPrimary: { background: C.primary, color: "#fff" },
-  btnSecondary: { background: C.primaryLight, color: C.primary },
+  btnSecondary: { background: C.primaryLight, color: C.primaryDark },
   btnGhost: { background: "transparent", color: C.sub, border: `1.5px solid ${C.border}` },
   btnDanger: { background: "#FEE2E2", color: "#EF4444" },
+  btnGreen: { background: C.green, color: "#fff" },
   input: {
     width: "100%", padding: "12px 14px", borderRadius: 10,
     border: `1.5px solid ${C.border}`, fontSize: 15, outline: "none",
@@ -136,7 +137,6 @@ const splitIntoChunks = async (sentence) => {
   }, []);
 };
 
-// ─── Firestore ─────────────────────────────────────────────────────────────────
 const DEFAULT_DATA = { progress: {}, studyDays: [], quizProgress: {}, favorites: {}, diaries: [], stepDone: {} };
 const loadUserData = async (uid) => {
   const snap = await getDoc(doc(db, "users", uid));
@@ -182,51 +182,51 @@ function useMic(onResult) {
   return { listening, startMic, stopMic };
 }
 
-// ─── Shared UI Components ─────────────────────────────────────────────────────
-function ResultCard({ correct, english, answer }) {
+// ─── ResultCard (스피커 삭제, 내 답 삭제, 가운데 정렬) ────────────────────────
+function ResultCard({ correct, english }) {
   return (
     <div style={{
       background: correct ? C.successBg : C.errorBg,
       border: `1.5px solid ${correct ? C.successBorder : C.errorBorder}`,
-      borderRadius: 12, padding: "14px 16px", marginTop: 12,
+      borderRadius: 12, padding: "16px", marginTop: 12, textAlign: "center",
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <span style={{ fontSize: 18 }}>{correct ? "✅" : "❌"}</span>
-        <span style={{ fontWeight: 700, color: correct ? C.success : C.error, fontSize: 15 }}>
-          {correct ? "정답!" : "오답"}
-        </span>
-        <button onClick={() => speak(english)}
-          style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: 18 }}>🔊</button>
+      <div style={{ fontSize: 24, marginBottom: 6 }}>{correct ? "✅" : "❌"}</div>
+      <div style={{ fontWeight: 700, color: correct ? C.success : C.error, fontSize: 15, marginBottom: 6 }}>
+        {correct ? "정답!" : "오답"}
       </div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{english}</div>
-      {!correct && answer && <div style={{ color: C.sub, fontSize: 13 }}>내 답: {answer}</div>}
+      <div style={{ color: C.text, fontWeight: 600, fontSize: 15 }}>{english}</div>
     </div>
   );
 }
 
+// ─── Header (뒤로 버튼 옆에 제목 배치) ────────────────────────────────────────
 function Header({ title, onBack, onQuit }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, minHeight: 40 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, minHeight: 44 }}>
       {onBack && (
-        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: C.text, padding: "4px 0", lineHeight: 1 }}>←</button>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: C.text, padding: "4px 0", lineHeight: 1, flexShrink: 0 }}>←</button>
       )}
-      {title && <span style={{ fontWeight: 700, fontSize: 17, color: C.text, flex: 1 }}>{title}</span>}
+      {onQuit && !onBack && (
+        <div style={{ width: 22 }} />
+      )}
+      {title && <span style={{ fontWeight: 700, fontSize: 16, color: C.text, flex: 1, lineHeight: 1.3 }}>{title}</span>}
       {onQuit && (
-        <button onClick={onQuit} style={{ ...S.btn, ...S.btnDanger, width: "auto", padding: "8px 16px", fontSize: 13 }}>그만하기</button>
+        <button onClick={onQuit} style={{ ...S.btn, ...S.btnDanger, width: "auto", padding: "8px 14px", fontSize: 13, flexShrink: 0 }}>그만하기</button>
       )}
     </div>
   );
 }
 
+// ─── ProgressBar (더 잘 보이는 색) ────────────────────────────────────────────
 function ProgressBar({ current, total }) {
   const pct = total > 0 ? Math.round((current / total) * 100) : 0;
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ fontSize: 12, color: C.sub }}>{current} / {total}</span>
-        <span style={{ fontSize: 12, color: C.primary, fontWeight: 700 }}>{pct}%</span>
+        <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>{current} / {total}</span>
+        <span style={{ fontSize: 12, color: C.primaryDark, fontWeight: 700 }}>{pct}%</span>
       </div>
-      <div style={{ height: 6, background: C.borderLight, borderRadius: 99 }}>
+      <div style={{ height: 8, background: "#E7E5E4", borderRadius: 99 }}>
         <div style={{ height: "100%", background: C.primary, borderRadius: 99, width: `${pct}%`, transition: "width 0.3s" }} />
       </div>
     </div>
@@ -250,12 +250,12 @@ function Modal({ visible, title, desc, buttons }) {
   );
 }
 
-function Badge({ label, color = C.primary, bg = C.primaryLight }) {
+function Badge({ label, color = C.primaryDark, bg = C.primaryLight }) {
   return <span style={{ background: bg, color, fontSize: 11, fontWeight: 700, borderRadius: 6, padding: "2px 8px" }}>{label}</span>;
 }
 
-// ─── QuizCoreWithIdx ──────────────────────────────────────────────────────────
-function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone }) {
+// ─── QuizCoreWithIdx (다음 버튼 화살표 삭제, ResultCard 업데이트) ──────────────
+function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone, screenTitle }) {
   const [shuffledItems] = useState(() => shuffle(rawItems));
   const [idx, setIdx] = useState(initIdx);
   const [answer, setAnswer] = useState("");
@@ -288,10 +288,10 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
       <ProgressBar current={idx} total={shuffledItems.length} />
       <div style={{ ...S.card, marginBottom: 16 }}>
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 8 }}>한국어</div>
-        <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.6, marginBottom: 12 }}>{curItem.Korean}</div>
-        <button onClick={() => speak(curItem.English)} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: C.sub }}>🔊 정답 듣기</button>
+        <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.6, marginBottom: 14 }}>{curItem.Korean}</div>
+        <button onClick={() => speak(curItem.English)} style={{ background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, color: C.primaryDark, fontWeight: 600 }}>🔊 정답 듣기</button>
       </div>
-      <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, background: listening ? C.accent : C.primaryLight, color: listening ? "#fff" : C.primary, marginBottom: 12, fontSize: 16, padding: "16px" }}>
+      <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, background: listening ? C.accent : C.green, color: "#fff", marginBottom: 12, fontSize: 16, padding: "16px" }}>
         {listening ? "⏹ 녹음 중지" : "🎤 영어로 말하기"}
       </button>
       <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="또는 직접 영어로 입력하세요"
@@ -299,16 +299,15 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
       {!submitted
         ? <button onClick={handleSubmit} disabled={!answer.trim()} style={{ ...S.btn, ...S.btnPrimary, opacity: answer.trim() ? 1 : 0.5 }}>제출</button>
         : <>
-          <ResultCard correct={result} english={curItem.English} answer={answer} />
+          <ResultCard correct={result} english={curItem.English} />
           <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary, marginTop: 12 }}>
-            {idx + 1 < shuffledItems.length ? "다음 →" : "완료!"}
+            {idx + 1 < shuffledItems.length ? "다음" : "완료"}
           </button>
         </>}
     </div>
   );
 }
 
-// ─── QuizCore (no idx tracking) ───────────────────────────────────────────────
 function QuizCore({ rawItems, onResult, onDone }) {
   return <QuizCoreWithIdx rawItems={rawItems} onResult={onResult} onDone={onDone} />;
 }
@@ -326,12 +325,12 @@ function LoginScreen() {
     finally { setLoading(false); }
   };
   return (
-    <div style={{ ...S.page, background: "linear-gradient(160deg,#1A3A8F 0%,#2D6BE4 50%,#4A90D9 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ ...S.page, background: "linear-gradient(160deg,#F59E0B 0%,#F97316 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
       <div style={{ textAlign: "center", padding: "0 32px" }}>
-        <img src="./assets/duck.png" alt="꽥" style={{ width: 120, height: 120, objectFit: "contain", marginBottom: 24, filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.25))" }} />
-        <div style={{ color: "#fff", fontSize: 36, fontWeight: 900, letterSpacing: -1, marginBottom: 8 }}>꽥</div>
-        <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 15, marginBottom: 48 }}>영어 스피킹 학습 앱</div>
-        <button onClick={handleGoogle} disabled={loading} style={{ ...S.btn, background: "#fff", color: C.text, boxShadow: "0 4px 20px rgba(0,0,0,0.2)", fontSize: 15, padding: "16px 32px" }}>
+        <img src="./assets/duck.png" alt="QUAK" style={{ width: 120, height: 120, objectFit: "contain", marginBottom: 24, filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }} />
+        <div style={{ color: "#fff", fontSize: 40, fontWeight: 900, letterSpacing: 2, marginBottom: 8 }}>QUAK</div>
+        <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 15, marginBottom: 48 }}>영어 스피킹 학습 앱</div>
+        <button onClick={handleGoogle} disabled={loading} style={{ ...S.btn, background: "#fff", color: C.text, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", fontSize: 15, padding: "16px 32px" }}>
           {loading ? "로그인 중..." : "🔑 Google로 시작하기"}
         </button>
       </div>
@@ -339,21 +338,19 @@ function LoginScreen() {
   );
 }
 
+// ─── HomeScreen ────────────────────────────────────────────────────────────────
 function HomeScreen({ go, userData, categories, sources, lessons, items }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { progress = {}, studyDays = [], quizProgress = {}, favorites = {}, diaries = [] } = userData;
 
-  // 오늘의 레슨 계산
   const todayLesson = (() => {
     if (!lessons.length) return null;
-    // 1) 진행 중인 레슨
     const inProgress = lessons.find((l) => {
       const key = `${l.LessonID}_${l.SourceID}`;
       const p = quizProgress[key];
       return p && p !== "done";
     });
     if (inProgress) return inProgress;
-    // 2) 마지막으로 완료한 레슨 다음 레슨
     const doneKeys = Object.entries(quizProgress).filter(([, v]) => v === "done").map(([k]) => k);
     if (doneKeys.length) {
       for (const key of doneKeys) {
@@ -373,23 +370,46 @@ function HomeScreen({ go, userData, categories, sources, lessons, items }) {
   const reviewCount = Object.values(progress).filter((p) => p.nextReview && p.nextReview <= today()).length;
   const favCount = Object.keys(favorites).length;
 
+  // 오늘의 레슨 클릭: 진행중이면 바로 해당 화면으로, 아니면 lessonSteps로
+  const handleTodayLesson = () => {
+    if (!todayLesson) return;
+    const key = `${todayLesson.LessonID}_${todayLesson.SourceID}`;
+    const qp = quizProgress[key];
+    if (qp && qp !== "done") {
+      // 진행 중인 화면으로 바로 이동 (resume: true → 해당 화면에서 팝업 뜸)
+      let screen = "stepQuiz";
+      if (qp.startsWith("preview_")) screen = "stepRead";
+      else if (qp.startsWith("build_")) screen = "stepBuild";
+      go(screen, { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID, resume: true });
+    } else {
+      go("lessonSteps", { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID });
+    }
+  };
+
   const catGroups = categories.map((cat) => ({
     cat,
     srcs: sources.filter((s) => s.CategoryID === cat.CategoryID && s.Type === "교재"),
   })).filter((g) => g.srcs.length);
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("정말로 탈퇴하시겠어요? 모든 데이터가 삭제됩니다.")) return;
+    try { await deleteUser(auth.currentUser); }
+    catch (e) { alert("탈퇴 실패. 재로그인 후 시도해주세요."); }
+  };
 
   return (
     <div style={S.page}>
       <div style={S.inner}>
         {/* 헤더 */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-          <div style={{ fontWeight: 900, fontSize: 24, color: C.text }}>꽥 🦆</div>
+          <div style={{ fontWeight: 900, fontSize: 26, color: C.text, letterSpacing: 1 }}>QUAK</div>
           <div style={{ position: "relative" }}>
             <img src="./assets/profile.jpg" alt="profile" onClick={() => setMenuOpen((v) => !v)}
-              style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", cursor: "pointer", border: `2px solid ${C.border}` }} />
+              style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", cursor: "pointer", border: `2.5px solid ${C.primary}` }} />
             {menuOpen && (
               <div style={{ position: "absolute", right: 0, top: 48, background: "#fff", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", padding: 8, minWidth: 140, zIndex: 100 }}>
-                <button onClick={() => signOut(auth)} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", textAlign: "left", cursor: "pointer", fontSize: 14, color: C.text, borderRadius: 8 }}>로그아웃</button>
+                <button onClick={() => { setMenuOpen(false); signOut(auth); }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", textAlign: "left", cursor: "pointer", fontSize: 14, color: C.text, borderRadius: 8 }}>로그아웃</button>
+                <button onClick={() => { setMenuOpen(false); handleDeleteAccount(); }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", textAlign: "left", cursor: "pointer", fontSize: 14, color: "#EF4444", borderRadius: 8 }}>회원 탈퇴</button>
               </div>
             )}
           </div>
@@ -398,14 +418,19 @@ function HomeScreen({ go, userData, categories, sources, lessons, items }) {
         {/* 통계 카드 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
           {[
-            { label: "학습일", value: studyDays.length, icon: "📅", onClick: () => go("calendar") },
+            { label: "학습일", value: studyDays.length, icon: "📅", onClick: () => go("calendar"), highlight: false },
             { label: "복습", value: reviewCount, icon: "🔄", onClick: reviewCount > 0 ? () => go("review") : null, highlight: reviewCount > 0 },
-            { label: "저장", value: favCount, icon: "⭐", onClick: favCount > 0 ? () => go("favoriteList") : null },
+            { label: "저장", value: favCount, icon: "⭐", onClick: favCount > 0 ? () => go("favoriteList") : null, highlight: false },
           ].map((s, i) => (
-            <div key={i} onClick={s.onClick} style={{ ...S.card, marginBottom: 0, textAlign: "center", cursor: s.onClick ? "pointer" : "default", padding: "14px 10px", border: s.highlight ? `2px solid ${C.accent}` : "none" }}>
-              <div style={{ fontSize: 20, marginBottom: 4 }}>{s.icon}</div>
-              <div style={{ fontWeight: 800, fontSize: 22, color: s.highlight ? C.accent : C.primary }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: C.sub }}>{s.label}</div>
+            <div key={i} onClick={s.onClick} style={{
+              ...S.card, marginBottom: 0, textAlign: "center", cursor: s.onClick ? "pointer" : "default",
+              padding: "16px 10px",
+              border: s.highlight ? `2px solid ${C.accent}` : `1.5px solid ${C.border}`,
+              background: s.highlight ? C.accentLight : C.card,
+            }}>
+              <div style={{ fontSize: 22, marginBottom: 10 }}>{s.icon}</div>
+              <div style={{ fontWeight: 800, fontSize: 24, color: s.highlight ? C.accent : C.primary, marginBottom: 4 }}>{s.value}</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.sub }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -413,33 +438,17 @@ function HomeScreen({ go, userData, categories, sources, lessons, items }) {
         {/* 오늘의 레슨 */}
         {todayLesson && (
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8, letterSpacing: 0.5 }}>오늘의 레슨</div>
-            <div onClick={() => go("lessonSteps", { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID, fromHome: true })}
-              style={{ ...S.card, marginBottom: 0, cursor: "pointer", background: "linear-gradient(135deg,#2D6BE4,#4A90D9)", color: "#fff" }}>
-              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>{todayLessonSource?.Name}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8 }}>오늘의 레슨</div>
+            <div onClick={handleTodayLesson}
+              style={{ ...S.card, marginBottom: 0, cursor: "pointer", background: "linear-gradient(135deg,#F59E0B,#F97316)", color: "#fff" }}>
+              <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>{todayLessonSource?.Name}</div>
               <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>{todayLesson.Title}</div>
-              <div style={{ display: "inline-block", background: "rgba(255,255,255,0.2)", borderRadius: 8, padding: "4px 12px", fontSize: 13, fontWeight: 600 }}>학습 시작 →</div>
+              <div style={{ display: "inline-block", background: "rgba(255,255,255,0.25)", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 700 }}>학습 시작</div>
             </div>
           </div>
         )}
 
-        {/* 복습 카드 */}
-        {reviewCount > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8 }}>오늘 복습</div>
-            <div onClick={() => go("review")} style={{ ...S.card, marginBottom: 0, cursor: "pointer", background: C.accentLight, border: `1.5px solid ${C.accent}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 24 }}>🔄</span>
-                <div>
-                  <div style={{ fontWeight: 700, color: C.accent }}>{reviewCount}개 문장 복습하기</div>
-                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>까먹기 전에 복습해요!</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 교재 */}
+        {/* 교재 선택 */}
         <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8 }}>교재 선택</div>
         {catGroups.map(({ cat, srcs }) => (
           <div key={cat.CategoryID} style={{ marginBottom: 16 }}>
@@ -500,7 +509,7 @@ function CalendarScreen({ go, userData }) {
             if (!d) return <div key={i} />;
             const ds = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
             const studied = studyDays.includes(ds); const isToday = ds === today();
-            return <div key={i} style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", fontSize: 13, fontWeight: studied ? 700 : 400, background: studied ? C.primary : isToday ? C.primaryLight : "transparent", color: studied ? "#fff" : isToday ? C.primary : C.text }}>{d}</div>;
+            return <div key={i} style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", fontSize: 13, fontWeight: studied ? 700 : 400, background: studied ? C.primary : isToday ? C.primaryLight : "transparent", color: studied ? "#fff" : isToday ? C.primaryDark : C.text }}>{d}</div>;
           })}
         </div>
       </div>
@@ -532,7 +541,7 @@ function LessonScreen({ go, nav, sources, lessons, items, userData }) {
               <div style={{ fontWeight: 600, fontSize: 14, color: C.text, marginBottom: 4 }}>{l.Title}</div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <span style={{ fontSize: 12, color: C.sub }}>{lessonItems.length}문장</span>
-                {studiedCount > 0 && <span style={{ fontSize: 12, color: C.primary }}>({studiedCount}개 학습됨)</span>}
+                {studiedCount > 0 && <span style={{ fontSize: 12, color: C.primaryDark }}>({studiedCount}개 학습됨)</span>}
                 {isDone && <Badge label="완료" color={C.done} bg={C.doneBg} />}
                 {isInProgress && <Badge label="진행중" color={C.accent} bg={C.accentLight} />}
               </div>
@@ -584,7 +593,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, userData, setUserData })
       {steps.map((step, i) => (
         <div key={step.id} onClick={() => go(step.screen, { lessonId, sourceId, catId: nav.catId })}
           style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 14, border: step.done ? `1.5px solid ${C.doneBorder}` : `1.5px solid ${C.border}`, background: step.done ? C.doneBg : C.card }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: step.done ? C.primary : C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{step.icon}</div>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: step.done ? C.green : C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{step.icon}</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: step.done ? C.done : C.text }}>{step.label}</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{i + 1}단계</div>
@@ -610,7 +619,7 @@ function StepVideoScreen({ go, nav, lessons, setUserData }) {
     <div style={S.page}><div style={S.inner}>
       <Header title="영상 보기" onBack={() => go("lessonSteps", nav)} />
       {videoId && <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 16, aspectRatio: "16/9" }}><iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}`} frameBorder="0" allowFullScreen style={{ display: "block" }} /></div>}
-      <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>다음: 따라읽기 →</button>
+      <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>다음: 따라읽기</button>
     </div></div>
   );
 }
@@ -624,19 +633,28 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   const cat = categories.find((c) => c.CategoryID === source?.CategoryID);
   const isOPIc = cat?.Name === "OPIc";
   const [shuffledItems] = useState(() => isOPIc ? shuffle(rawItems) : rawItems);
+  const [resumeModal, setResumeModal] = useState(false);
 
-  const initState = (() => {
-    const saved = resume ? quizProgress[key] : null;
+  const savedState = (() => {
+    const saved = quizProgress[key];
     if (saved && saved.startsWith("preview_")) { const p = saved.split("_"); return { idx: Number(p[1]) || 0, round: Number(p[2]) || 1 }; }
-    return { idx: 0, round: 1 };
+    return null;
   })();
 
-  const [idx, setIdx] = useState(initState.idx);
-  const [round, setRound] = useState(initState.round);
+  const [idx, setIdx] = useState(resume && savedState ? savedState.idx : 0);
+  const [round, setRound] = useState(resume && savedState ? savedState.round : 1);
   const [spokenText, setSpokenText] = useState("");
   const [feedback, setFeedback] = useState("");
   const curItem = shuffledItems[idx];
   const total = shuffledItems.length; const totalRounds = 2;
+
+  // resume=true이고 진행 중인 게 있으면 팝업
+  useEffect(() => {
+    if (resume && savedState) setResumeModal(true);
+  }, []);
+
+  const handleResumeContinue = () => setResumeModal(false);
+  const handleResumeFresh = () => { setIdx(0); setRound(1); setResumeModal(false); };
 
   useEffect(() => {
     setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: `preview_${idx}_${round}` } }));
@@ -668,20 +686,22 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         <div style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 20, lineHeight: 1.6 }}>{curItem.Korean}</div>
         <div style={{ width: "100%", height: 1, background: C.borderLight, marginBottom: 20 }} />
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 8 }}>영어</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: C.primary, lineHeight: 1.5 }}>{curItem.English}</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: C.primaryDark, lineHeight: 1.5 }}>{curItem.English}</div>
       </div>
       <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
         <button onClick={() => speak(curItem.English)} style={{ ...S.btn, ...S.btnSecondary, flex: 1, padding: "12px" }}>🔊 듣기</button>
-        <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? C.accent : C.primaryLight, color: listening ? "#fff" : C.primary }}>
+        <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? C.accent : C.green, color: "#fff" }}>
           {listening ? "⏹ 중지" : "🎤 따라읽기"}
         </button>
       </div>
       {spokenText && <div style={{ ...S.card, fontSize: 13, color: C.sub, marginBottom: 12 }}>들린 말: {spokenText}</div>}
       {feedback && <div style={{ textAlign: "center", color: C.green, fontWeight: 700, fontSize: 16, marginBottom: 12 }}>{feedback}</div>}
       <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>
-        {idx + 1 < total ? "다음 →" : round < totalRounds ? "2회차 시작 →" : "완료! 문장 만들기 →"}
+        {idx + 1 < total ? "다음" : round < totalRounds ? "2회차 시작" : "완료! 문장 만들기"}
       </button>
-    </div></div>
+    </div>
+    <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요. 이어서 할까요?" buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
+    </div>
   );
 }
 
@@ -694,20 +714,25 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   const cat = categories.find((c) => c.CategoryID === source?.CategoryID);
   const isOPIc = cat?.Name === "OPIc";
   const [shuffledItems] = useState(() => isOPIc ? shuffle(rawItems) : rawItems);
+  const [resumeModal, setResumeModal] = useState(false);
 
-  const initIdx = (() => { const saved = resume ? quizProgress[key] : null; return (saved && saved.startsWith("build_")) ? Number(saved.split("_")[1]) || 0 : 0; })();
-  const [idx, setIdx] = useState(initIdx);
-  const [chunks, setChunks] = useState([]);
+  const savedIdx = (() => { const saved = quizProgress[key]; return (saved && saved.startsWith("build_")) ? Number(saved.split("_")[1]) || 0 : 0; })();
+  const [idx, setIdx] = useState(resume ? savedIdx : 0);
   const [options, setOptions] = useState([]);
   const [selected, setSelected] = useState([]);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const curItem = shuffledItems[idx];
 
+  useEffect(() => { if (resume && savedIdx > 0) setResumeModal(true); }, []);
+
+  const handleResumeContinue = () => setResumeModal(false);
+  const handleResumeFresh = () => { setIdx(0); setResumeModal(false); };
+
   const loadChunks = async (item) => {
     setLoading(true); setSelected([]); setResult(null);
     const ch = await splitIntoChunks(item.English);
-    setChunks(ch); setOptions(shuffle(ch.map((c, i) => ({ id: i, text: c })))); setLoading(false);
+    setOptions(shuffle(ch.map((c, i) => ({ id: i, text: c })))); setLoading(false);
   };
 
   useEffect(() => { if (curItem) loadChunks(curItem); }, [idx]);
@@ -736,20 +761,22 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
       <div style={{ minHeight: 56, border: `2px dashed ${result === true ? C.successBorder : result === false ? C.errorBorder : C.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", background: result === true ? C.successBg : result === false ? C.errorBg : "#fff" }}>
         {selected.length === 0 ? <span style={{ color: C.sub, fontSize: 13 }}>단어를 선택하세요</span>
           : selected.map((s, i) => (
-            <button key={i} onClick={() => handleDeselect(s, i)} style={{ background: result === true ? C.success : result === false ? C.error : C.primary, color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{s.text}</button>
+            <button key={i} onClick={() => handleDeselect(s, i)} style={{ background: result === true ? C.success : result === false ? C.error : C.primary, color: result !== null ? "#fff" : C.text, border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{s.text}</button>
           ))}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
         {loading ? <span style={{ color: C.sub, fontSize: 13 }}>문장 분석 중...</span>
           : options.map((opt) => (
-            <button key={opt.id} onClick={() => handleSelect(opt)} style={{ background: C.primaryLight, color: C.primary, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
+            <button key={opt.id} onClick={() => handleSelect(opt)} style={{ background: C.primaryLight, color: C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
           ))}
       </div>
-      {result !== null && <ResultCard correct={result} english={curItem.English} answer={selected.map((s) => s.text).join(" ")} />}
+      {result !== null && <ResultCard correct={result} english={curItem.English} />}
       {result === null
         ? <button onClick={handleSubmit} disabled={selected.length === 0} style={{ ...S.btn, ...S.btnPrimary, marginTop: 12, opacity: selected.length === 0 ? 0.5 : 1 }}>제출</button>
-        : <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary, marginTop: 12 }}>{idx + 1 < shuffledItems.length ? "다음 →" : "Speaking Test →"}</button>}
-    </div></div>
+        : <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary, marginTop: 12 }}>{idx + 1 < shuffledItems.length ? "다음" : "Speaking Test"}</button>}
+    </div>
+    <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요. 이어서 할까요?" buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
+    </div>
   );
 }
 
@@ -759,7 +786,14 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   const { quizProgress = {} } = userData;
   const [done, setDone] = useState(false);
   const lessonItems = items.filter((it) => it.LessonID === lessonId);
-  const initIdx = (() => { const saved = resume ? quizProgress[key] : null; return (saved && !isNaN(Number(saved))) ? Number(saved) : 0; })();
+  const [resumeModal, setResumeModal] = useState(false);
+
+  const savedIdx = (() => { const saved = quizProgress[key]; return (saved && !isNaN(Number(saved)) && !saved.startsWith("preview") && !saved.startsWith("build")) ? Number(saved) : 0; })();
+  const [startIdx, setStartIdx] = useState(resume ? savedIdx : 0);
+
+  useEffect(() => { if (resume && savedIdx > 0) setResumeModal(true); }, []);
+  const handleResumeContinue = () => setResumeModal(false);
+  const handleResumeFresh = () => { setStartIdx(0); setResumeModal(false); };
 
   const handleResult = (itemId, correct) => {
     setUserData((prev) => {
@@ -787,11 +821,13 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   return (
     <div style={S.page}><div style={S.inner}>
       <Header title="Speaking Test" onQuit={() => go("lessonSteps", { lessonId, sourceId })} />
-      <QuizCoreWithIdx rawItems={lessonItems} initIdx={initIdx}
+      <QuizCoreWithIdx rawItems={lessonItems} initIdx={startIdx}
         onResult={handleResult}
         onIdxChange={(i) => setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: String(i) } }))}
         onDone={handleDone} />
-    </div></div>
+    </div>
+    <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요. 이어서 할까요?" buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
+    </div>
   );
 }
 
@@ -810,7 +846,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
   return (
     <div style={S.page}><div style={S.inner}>
       <Header title="Diary 쓰기" onBack={() => go("lessonSteps", nav)} />
-      {lesson?.DiaryPrompt && <div style={{ ...S.card, background: C.primaryLight, marginBottom: 16 }}><div style={{ fontSize: 13, color: C.primary, fontWeight: 600 }}>💡 오늘의 주제</div><div style={{ fontSize: 14, color: C.text, marginTop: 6 }}>{lesson.DiaryPrompt}</div></div>}
+      {lesson?.DiaryPrompt && <div style={{ ...S.card, background: C.primaryLight, marginBottom: 16 }}><div style={{ fontSize: 13, color: C.primaryDark, fontWeight: 600 }}>💡 오늘의 주제</div><div style={{ fontSize: 14, color: C.text, marginTop: 6 }}>{lesson.DiaryPrompt}</div></div>}
       <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="오늘 배운 표현을 사용해서 영어로 일기를 써보세요..." style={{ ...S.input, minHeight: 200, marginBottom: 12, display: "block" }} />
       <button onClick={handleSave} disabled={!content.trim()} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 12, opacity: content.trim() ? 1 : 0.5 }}>저장하기</button>
       <button onClick={() => go("lessonSteps", nav)} style={{ ...S.btn, ...S.btnGhost }}>건너뛰기</button>
@@ -818,6 +854,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
   );
 }
 
+// ─── ReviewScreen (제목 좌측, 말하기 버튼 초록, ResultCard 업데이트) ───────────
 function ReviewScreen({ go, userData, setUserData, items }) {
   const { progress = {} } = userData;
   const reviewItems = items.filter((it) => { const p = progress[it.ItemID]; return p?.nextReview && p.nextReview <= today(); });
@@ -845,6 +882,7 @@ function ReviewScreen({ go, userData, setUserData, items }) {
   );
 }
 
+// ─── FavoriteListScreen (카드 재디자인) ────────────────────────────────────────
 function FavoriteListScreen({ go, userData, setUserData, items }) {
   const { favorites = {} } = userData;
   const favItems = items.filter((it) => favorites[it.ItemID]);
@@ -856,22 +894,23 @@ function FavoriteListScreen({ go, userData, setUserData, items }) {
       {favItems.length === 0 && <div style={{ textAlign: "center", color: C.sub, padding: 40 }}>저장한 문장이 없어요</div>}
       {favItems.map((it) => (
         <div key={it.ItemID} style={{ ...S.card }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, color: C.sub, marginBottom: 4 }}>{it.Korean}</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{it.English}</div>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
-              <button onClick={() => speak(it.English)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18 }}>🔊</button>
-              <button onClick={() => toggleFav(it.ItemID)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18 }}>⭐</button>
-            </div>
+          {/* 상단: 별 아이콘 */}
+          <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 4 }}>
+            <button onClick={() => toggleFav(it.ItemID)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: 0 }}>⭐</button>
           </div>
+          {/* 한국어 */}
+          <div style={{ fontSize: 13, color: C.sub, marginBottom: 8 }}>{it.Korean}</div>
+          {/* 영어 */}
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 12 }}>{it.English}</div>
+          {/* 듣기 버튼 */}
+          <button onClick={() => speak(it.English)} style={{ ...S.btn, ...S.btnSecondary, padding: "8px 16px", fontSize: 13 }}>듣기</button>
         </div>
       ))}
     </div></div>
   );
 }
 
+// ─── FavoriteQuizScreen (제목 좌측, ResultCard 업데이트) ──────────────────────
 function FavoriteQuizScreen({ go, userData, setUserData, items }) {
   const { favorites = {} } = userData;
   const favItems = items.filter((it) => favorites[it.ItemID]);
@@ -894,6 +933,7 @@ function FavoriteQuizScreen({ go, userData, setUserData, items }) {
   );
 }
 
+// ─── DiaryListScreen (휴지통 상단, 레슨명 가운데, 내용 숨김) ─────────────────
 function DiaryListScreen({ go, userData, setUserData }) {
   const { diaries = [] } = userData;
   const sorted = [...diaries].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
@@ -904,14 +944,13 @@ function DiaryListScreen({ go, userData, setUserData }) {
       {sorted.length === 0 && <div style={{ textAlign: "center", color: C.sub, padding: 40 }}>아직 작성한 다이어리가 없어요</div>}
       {sorted.map((d) => (
         <div key={d.id} style={{ ...S.card, cursor: "pointer" }} onClick={() => go("diaryDetail", { diaryId: d.id })}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>{d.date} · {d.sourceName}</div>
-              <div style={{ fontWeight: 600, fontSize: 14, color: C.text, marginBottom: 6 }}>{d.lessonTitle}</div>
-              <div style={{ fontSize: 13, color: C.sub, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{d.content}</div>
-            </div>
-            <button onClick={(e) => { e.stopPropagation(); handleDelete(d.id); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: C.sub, marginLeft: 8 }}>🗑️</button>
+          {/* 상단: 날짜 + 휴지통 */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ fontSize: 12, color: C.sub }}>{d.date} · {d.sourceName}</div>
+            <button onClick={(e) => { e.stopPropagation(); handleDelete(d.id); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: C.sub, padding: 0 }}>🗑️</button>
           </div>
+          {/* 레슨명 가운데 정렬 */}
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, textAlign: "center" }}>{d.lessonTitle}</div>
         </div>
       ))}
     </div></div>

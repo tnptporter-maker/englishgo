@@ -1144,10 +1144,10 @@ function CalendarScreen({ go, userData }) {
     <div style={S.page}><div style={S.inner}>
       <Header title="학습 달력" onBack={() => go("home")} />
       {/* 연속 학습일 */}
-      <div style={{ ...S.card, textAlign: "center", marginBottom: 12, background: C.accentLight, border: `1.5px solid ${C.accent}` }}>
-        <span style={{ fontSize: 28 }}>🔥</span>
-        <div style={{ fontWeight: 900, fontSize: 28, color: C.accent, marginTop: 4 }}>{streakDays}일</div>
-        <div style={{ fontSize: 13, color: C.sub, marginTop: 2 }}>연속 학습</div>
+      <div style={{ ...S.card, display: "flex", alignItems: "center", gap: 8, marginBottom: 12, background: C.accentLight, border: `1.5px solid ${C.accent}` }}>
+        <span style={{ fontSize: 22 }}>🔥</span>
+        <span style={{ fontWeight: 900, fontSize: 18, color: C.accent }}>연속 학습</span>
+        <span style={{ fontWeight: 900, fontSize: 18, color: C.accent }}>{streakDays}일</span>
       </div>
       {/* 달력 */}
       <div style={{ ...S.card }}>
@@ -1168,11 +1168,6 @@ function CalendarScreen({ go, userData }) {
           })}
         </div>
       </div>
-      <div style={{ ...S.card, textAlign: "center" }}>
-        <div style={{ fontSize: 32, fontWeight: 900, color: C.primary }}>{studyDays.length}</div>
-        <div style={{ color: C.sub, fontSize: 14 }}>총 학습일</div>
-      </div>
-    </div></div>
   );
 }
 

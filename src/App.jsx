@@ -409,26 +409,30 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
   const [selectedLesson, setSelectedLesson] = useState(null);
   const lessonRefs = useRef({});
   const autoScrolled = useRef(false);
+
+  useEffect(() => {
+    if (autoScrolled.current || !todayLesson) return;
+    const timer = setTimeout(() => {
+      lessonRefs.current[todayLesson.LessonID]?.scrollIntoView({ behavior: "smooth", block: "start" });
+      autoScrolled.current = true;
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [sortedLessons]);
   const { studyDays = [], quizProgress = {} } = userData;
 
-  // 선택된 교재의 레슨만 Order 기준 정렬
+  // 선택된 교재의 레슨만 표시 (미선택시 첫 번째 교재 자동 선택)
+  const activeSourceId = selectedSourceId || (sources.length > 0 ? [...sources].sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0))[0]?.SourceID : null);
+
   const sortedLessons = (() => {
-    const srcs = selectedSourceId
-      ? sources.filter(s => s.SourceID === selectedSourceId)
-      : [...sources].sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0));
-    const result = [];
-    srcs.forEach(src => {
-      const srcLessons = lessons
-        .filter(l => l.SourceID === src.SourceID && l.LessonID && l.Title)
-        .sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0));
-      result.push(...srcLessons);
-    });
-    return result;
+    if (!activeSourceId) return [];
+    return lessons
+      .filter(l => l.SourceID === activeSourceId && l.LessonID && l.Title)
+      .sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0));
   })();
 
-  const selectedSource = selectedSourceId ? sources.find(s => s.SourceID === selectedSourceId) : null;
+  const selectedSource = sources.find(s => s.SourceID === activeSourceId) || null;
 
-  // 오늘의 레슨
+  // 자동 스크롤 기준 레슨 (진행중 → 다음 레슨 → 첫 레슨)
   const todayLesson = (() => {
     if (!sortedLessons.length) return null;
     const inProgress = sortedLessons.find((l) => {
@@ -440,10 +444,9 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
     for (const l of sortedLessons) {
       const key = `${l.LessonID}_${l.SourceID}`;
       if (quizProgress[key] === "done") {
-        const srcLessons = sortedLessons.filter(x => x.SourceID === l.SourceID);
-        const idx = srcLessons.findIndex(x => x.LessonID === l.LessonID);
-        if (idx >= 0 && idx + 1 < srcLessons.length) {
-          const next = srcLessons[idx + 1];
+        const idx = sortedLessons.findIndex(x => x.LessonID === l.LessonID);
+        if (idx >= 0 && idx + 1 < sortedLessons.length) {
+          const next = sortedLessons[idx + 1];
           if (quizProgress[`${next.LessonID}_${next.SourceID}`] !== "done") return next;
         }
       }
@@ -529,12 +532,7 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
           <button onClick={() => go("courseSelect")} style={{ background: C.primaryLight, border: "none", borderRadius: 20, padding: "8px 16px", fontWeight: 700, fontSize: 14, color: C.primaryDark, cursor: "pointer" }}>
             Course ▾
           </button>
-          {/* 교재명 표시 */}
-        {selectedSource && (
-          <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, marginBottom: 12, marginTop: -16 }}>
-            {categories.find(c => c.CategoryID === selectedSource.CategoryID)?.Name} · {selectedSource.Name}
-          </div>
-        )}
+          
 
           {/* 중앙 불꽃 */}
           <div onClick={() => go("calendar")} style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4, background: C.accentLight, borderRadius: 20, padding: "8px 14px", cursor: "pointer" }}>
@@ -552,67 +550,6 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
               </div>
             )}
           </div>
-        </div>
-
-        {/* 현재 레슨 고정 영역 - 스픽 스타일 */}
-        {todayLesson && (() => {
-          const todaySrc = sources.find(s => s.SourceID === todayLesson.SourceID);
-          const todayCat = categories.find(c => c.CategoryID === todaySrc?.CategoryID);
-          const todayKey = `${todayLesson.LessonID}_${todayLesson.SourceID}`;
-          const todayQp = quizProgress[todayKey];
-          const todaySd = userData.stepDone?.[todayKey] || {};
-          const todayFirstItem = items.find(it => it.LessonID === todayLesson.LessonID);
-          const isTodaySelected = selectedLesson?.LessonID === todayLesson.LessonID;
-          return (
-            <div style={{ marginBottom: 20 }}>
-              {/* 카테고리명 + 스크립트 버튼 (선택된 레슨 기준) */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.sub }}>{todayCat?.Name}</span>
-                <button onClick={() => {
-                  const target = selectedLesson || todayLesson;
-                  go("scriptDetail", { lessonId: target.LessonID, sourceId: target.SourceID, fromHome: true });
-                }}
-                  style={{ background: C.primaryLight, border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16 }}>📋</button>
-              </div>
-              {/* 교재명 크게 */}
-              <div style={{ fontWeight: 800, fontSize: 22, color: C.text, marginBottom: 4, textAlign: "left" }}>{todaySrc?.Name}</div>
-              {/* 레슨명 */}
-              <div style={{ fontSize: 14, color: C.sub, marginBottom: 16, textAlign: "left" }}>{todayLesson.Title}</div>
-              {/* 주황 카드 - 단계 선택 */}
-              <div style={{ background: "linear-gradient(135deg,#F59E0B,#F97316)", borderRadius: 20, padding: "20px 16px" }}>
-                {/* 첫 문장 */}
-                {todayFirstItem && (
-                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", marginBottom: 16, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
-                    "{todayFirstItem.English}"
-                  </div>
-                )}
-                {/* 단계 가로 스크롤 */}
-                <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-                  {stepList.map((step) => {
-                    const stepKey = step.id.replace("step", "").toLowerCase();
-                    const isDoneStep = step.id === "stepQuiz" ? todayQp === "done" : todaySd[stepKey];
-                    return (
-                      <button key={step.id}
-                        onClick={() => go(step.id, { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID })}
-                        style={{ background: isDoneStep ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)", border: isDoneStep ? "2px solid rgba(255,255,255,0.7)" : "2px solid rgba(255,255,255,0.25)", borderRadius: 14, padding: "14px 10px", cursor: "pointer", textAlign: "center", minWidth: 80, flexShrink: 0 }}>
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginBottom: 6, fontWeight: 600 }}>{step.num}단계</div>
-                        <div style={{ fontSize: 26, marginBottom: 6 }}><StepIcon type={step.type} color={isDoneStep ? "#fff" : C.primaryDark} /></div>
-                        <div style={{ fontWeight: 700, fontSize: 12, color: "#fff", lineHeight: 1.3 }}>{step.label}</div>
-                        {isDoneStep && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>✓ 완료</div>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* 구분선 + LESSONS 타이틀 */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, marginTop: 8 }}>
-          <div style={{ flex: 1, height: 1, background: C.border }} />
-          <span style={{ fontSize: 11, fontWeight: 700, color: C.sub, letterSpacing: 1 }}>LESSONS</span>
-          <div style={{ flex: 1, height: 1, background: C.border }} />
         </div>
 
         {/* 레슨 목록 */}
@@ -634,19 +571,13 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
               <div
                 ref={(el) => {
                   lessonRefs.current[l.LessonID] = el;
-                  if (isTodayLesson && el && !autoScrolled.current) {
-                    setTimeout(() => {
-                      el.scrollIntoView({ behavior: "smooth", block: "start" });
-                      autoScrolled.current = true;
-                    }, 300);
-                  }
                 }}
                 style={{ ...S.card, marginBottom: 0, cursor: "pointer", border: isSelected ? `2px solid ${C.primary}` : `1.5px solid ${C.border}` }}
                 onClick={() => {
                   if (isSelected) { setSelectedLesson(null); return; }
                   setSelectedLesson(l);
                   setTimeout(() => {
-                    lessonRefs.current[l.LessonID]?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    lessonRefs.current[l.LessonID]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
                   }, 50);
                 }}
               >
@@ -831,7 +762,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
     setSpokenText(text);
     const score = similarityScore(curItem?.English || "", text);
     if (score >= 0.8) setFeedback("잘 했어요! 👍");
-    else if (text.trim().length > 0) setFeedback("다시 해보세요 🔄");
+    else if (text.trim().length > 0) setFeedback("다시 해보세요");
     else setFeedback("");
   });
 
@@ -860,7 +791,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         {/* 회차 표시 */}
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
-            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round === r ? C.primary : C.borderLight, color: round === r ? "#fff" : C.sub }}>
+            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round === r ? "#EDE1D6" : C.borderLight, color: round === r ? "#000" : C.sub }}>
               {r}회차
             </div>
           ))}
@@ -874,7 +805,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         </div>
         <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
           <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#EDE1D6", color: "#000", fontWeight: 700, fontSize: 14 }}>🔊 듣기</button>
-          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? C.accent : "#CCDA9C", color: listening ? "#fff" : "#4A5E2A", fontWeight: 700, fontSize: 14 }}>
+          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#B5C98A" : "#CCDA9C", color: "#4A5E2A", fontWeight: 700, fontSize: 14 }}>
             {listening ? "⏹ 중지" : "🎤 따라읽기"}
           </button>
         </div>

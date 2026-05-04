@@ -21,7 +21,7 @@ const db = getFirestore(fbApp);
 const googleProvider = new GoogleAuthProvider();
 
 const SHEET_ID = "1njMTapDCnpFP4mj6U0EEHPGumHfbBVWrljrX99_zUg0";
-const REVIEW_INTERVALS = [1, 3, 7, 14, 30, 90];
+const REVIEW_INTERVALS = [1, 2, 3, 7, 14, 30, 45, 60, 75, 90];
 
 // ─── 디자인 토큰 ──────────────────────────────────────────────────────────────
 const C = {
@@ -259,8 +259,7 @@ function ResultCard({ correct, english }) {
       borderRadius: 12, padding: "16px", marginTop: 12, textAlign: "center",
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 22, color: correct ? C.accent : C.error }}>{correct ? "⭕" : "❌"}</span>
-        <span style={{ fontWeight: 700, color: correct ? C.accent : C.error, fontSize: 15 }}>
+        <span style={{ fontWeight: 700, color: correct ? C.accent : C.error, fontSize: 22 }}>
           {correct ? "정답!" : "오답"}
         </span>
       </div>
@@ -333,7 +332,7 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
       <div style={{ ...S.card, marginBottom: 16 }}>
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 8 }}>한국어</div>
         <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.6, marginBottom: 14 }}>{curItem.Korean}</div>
-        <button onClick={() => speak(curItem.English)} style={{ background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, color: C.primaryDark, fontWeight: 600 }}>🔊 정답 듣기</button>
+        <button onClick={() => speak(curItem.English)} style={{ background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, color: C.primaryDark, fontWeight: 600 }}>🔊 듣기</button>
       </div>
       <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, background: listening ? C.accent : C.primary, color: "#fff", marginBottom: 12, fontSize: 16, padding: "16px" }}>
         {listening ? "⏹ 녹음 중지" : "🎤 영어로 말하기"}
@@ -529,7 +528,7 @@ function CourseSelectScreen({ go, categories, sources, lessons }) {
         <Header title="교재 선택" onBack={() => go("home")} />
         {catGroups.map(({ cat, srcs }) => (
           <div key={cat.CategoryID} style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 17, fontWeight: 700, color: C.error, marginBottom: 8 }}>{cat.Name}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.accent, marginBottom: 8 }}>{cat.Name}</div>
             {srcs.map((src) => (
               <div key={src.SourceID} onClick={() => go("lesson", { sourceId: src.SourceID, catId: cat.CategoryID })}
                 style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>

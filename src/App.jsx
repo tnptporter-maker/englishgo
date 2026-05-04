@@ -989,16 +989,50 @@ function DiaryListScreen({ go, userData, setUserData }) {
 function DiaryDetailScreen({ go, nav, userData }) {
   const { diaryId } = nav;
   const diary = userData.diaries?.find((d) => d.id === diaryId);
-  if (!diary) return <div style={S.page}><div style={S.inner}><Header title="다이어리" onBack={() => go("diaryList")} /><p>찾을 수 없습니다.</p></div></div>;
-  return (
-    <div style={S.page}><div style={S.inner}>
-      <Header title={diary.date} onBack={() => go("diaryList")} />
-      <div style={{ ...S.card }}>
-        <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>{diary.sourceName}</div>
-        <div style={{ fontWeight: 700, fontSize: 16, color: C.text, marginBottom: 16 }}>{diary.lessonTitle}</div>
-        <div style={{ fontSize: 15, color: C.text, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{diary.content}</div>
+
+  if (!diary) {
+    return (
+      <div style={S.page}>
+        <div style={S.inner}>
+          <Header title="다이어리" onBack={() => go("diaryList")} />
+          <p>찾을 수 없습니다.</p>
+        </div>
       </div>
-    </div></div>
+    );
+  }
+
+  return (
+    <div style={S.page}>
+      <div style={S.inner}>
+        {/* 헤더 영역: 뒤로가기 버튼과 왼쪽 정렬된 날짜 */}
+        <div style={{ position: "relative" }}>
+          <Header title="" onBack={() => go("diaryList")} />
+          <div style={{ 
+            position: "absolute", 
+            left: 50, 
+            top: 14, 
+            fontSize: 18, 
+            fontWeight: 700, 
+            color: C.text 
+          }}>
+            {diary.date}
+          </div>
+        </div>
+
+        {/* 상세 내용 카드 */}
+        <div style={{ ...S.card, marginTop: 10 }}>
+          <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>
+            {diary.sourceName}
+          </div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: C.text, marginBottom: 16 }}>
+            {diary.lessonTitle}
+          </div>
+          <div style={{ fontSize: 15, color: C.text, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
+            {diary.content}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

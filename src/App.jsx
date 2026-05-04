@@ -421,14 +421,6 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
   const lessonRefs = useRef({});
   const autoScrolled = useRef(false);
 
-  useEffect(() => {
-    if (autoScrolled.current || !todayLesson) return;
-    const timer = setTimeout(() => {
-      lessonRefs.current[todayLesson.LessonID]?.scrollIntoView({ behavior: "smooth", block: "start" });
-      autoScrolled.current = true;
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [sortedLessons]);
   const { studyDays = [], quizProgress = {} } = userData;
 
   // 선택된 교재의 레슨만 표시 (미선택시 첫 번째 교재 자동 선택)
@@ -464,6 +456,15 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
     }
     return sortedLessons[0];
   })();
+
+  useEffect(() => {
+    if (autoScrolled.current || !todayLesson) return;
+    const timer = setTimeout(() => {
+      lessonRefs.current[todayLesson.LessonID]?.scrollIntoView({ behavior: "smooth", block: "start" });
+      autoScrolled.current = true;
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [sortedLessons]);
 
   // 연속 학습일
   const streakDays = (() => {

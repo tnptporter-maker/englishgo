@@ -532,14 +532,13 @@ function LessonScreen({ go, nav, sources, lessons, items, userData }) {
   // sourceId가 있으면 레슨 목록, 없으면 교재 목록 표시
   if (!sourceId) {
     const catSources = sources.filter((s) => s.CategoryID === catId);
-    const cat = catSources[0];
     return (
       <div style={S.page}><div style={S.inner}>
         <Header title={nav.catName || "교재 선택"} onBack={() => go("home")} />
         {catSources.map((src) => (
           <div key={src.SourceID} onClick={() => go("lesson", { sourceId: src.SourceID, catId })}
             style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: 15, color: C.text }}>{src.Name}</div>
               <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
             </div>

@@ -404,45 +404,6 @@ function LoginScreen() {
 // ════════════════════════════════════════════════════════════════════════════════
 // 홈
 // ════════════════════════════════════════════════════════════════════════════════
-function StepIcon({ type, color }) {
-  const s = { width: 28, height: 28 };
-  if (type === "video") return (
-    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
-      <polygon points="5,3 19,12 5,21" fill={color} stroke="none" />
-    </svg>
-  );
-  if (type === "read") return (
-    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      <circle cx="9" cy="11" r="1" fill={color} />
-      <circle cx="12" cy="11" r="1" fill={color} />
-      <circle cx="15" cy="11" r="1" fill={color} />
-    </svg>
-  );
-  if (type === "build") return (
-    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
-      <rect x="2" y="2" width="9" height="9" rx="1" />
-      <rect x="13" y="2" width="9" height="9" rx="1" />
-      <rect x="2" y="13" width="9" height="9" rx="1" />
-      <rect x="13" y="13" width="9" height="9" rx="1" />
-    </svg>
-  );
-  if (type === "quiz") return (
-    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
-      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <line x1="12" y1="19" x2="12" y2="23" />
-      <line x1="8" y1="23" x2="16" y2="23" />
-    </svg>
-  );
-  if (type === "diary") return (
-    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-  return null;
-}
 
 function StepIcon({ type, color }) {
   const s = { width: 28, height: 28 };

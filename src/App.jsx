@@ -448,11 +448,52 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
     catch (e) { alert("탈퇴 실패. 재로그인 후 시도해주세요."); }
   };
 
+  const StepIcon = ({ type, color }) => {
+    const s = { width: 28, height: 28 };
+    if (type === "video") return (
+      <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+        <polygon points="5,3 19,12 5,21" fill={color} stroke="none" />
+      </svg>
+    );
+    if (type === "read") return (
+      <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <circle cx="9" cy="11" r="1" fill={color} />
+        <circle cx="12" cy="11" r="1" fill={color} />
+        <circle cx="15" cy="11" r="1" fill={color} />
+      </svg>
+    );
+    if (type === "build") return (
+      <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+        <rect x="2" y="2" width="9" height="9" rx="1" />
+        <rect x="13" y="2" width="9" height="9" rx="1" />
+        <rect x="2" y="13" width="9" height="9" rx="1" />
+        <rect x="13" y="13" width="9" height="9" rx="1" />
+      </svg>
+    );
+    if (type === "quiz") return (
+      <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+        <line x1="12" y1="19" x2="12" y2="23" />
+        <line x1="8" y1="23" x2="16" y2="23" />
+      </svg>
+    );
+    if (type === "diary") return (
+      <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}>
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+      </svg>
+    );
+    return null;
+  };
+
   const stepList = [
-    { id: "stepRead",  icon: "👄", label: "따라읽기",    num: 1 },
-    { id: "stepBuild", icon: "🔤", label: "문장 만들기", num: 2 },
-    { id: "stepQuiz",  icon: "🎙️", label: "Speaking",   num: 3 },
-    { id: "stepDiary", icon: "✏️", label: "Diary",      num: 4 },
+    { id: "stepVideo", type: "video", label: "영상 보기",   num: 1 },
+    { id: "stepRead",  type: "read",  label: "따라읽기",    num: 2 },
+    { id: "stepBuild", type: "build", label: "문장 만들기", num: 3 },
+    { id: "stepQuiz",  type: "quiz",  label: "Speaking",   num: 4 },
+    { id: "stepDiary", type: "diary", label: "Diary",      num: 5 },
   ];
 
   return (
@@ -480,6 +521,64 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
               </div>
             )}
           </div>
+        </div>
+
+        {/* 현재 레슨 고정 영역 - 스픽 스타일 */}
+        {todayLesson && (() => {
+          const todaySrc = sources.find(s => s.SourceID === todayLesson.SourceID);
+          const todayCat = categories.find(c => c.CategoryID === todaySrc?.CategoryID);
+          const todayKey = `${todayLesson.LessonID}_${todayLesson.SourceID}`;
+          const todayQp = quizProgress[todayKey];
+          const todaySd = userData.stepDone?.[todayKey] || {};
+          const todayFirstItem = items.find(it => it.LessonID === todayLesson.LessonID);
+          const isTodaySelected = selectedLesson?.LessonID === todayLesson.LessonID;
+          return (
+            <div style={{ marginBottom: 20 }}>
+              {/* 카테고리명 + 스크립트 버튼 */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.sub }}>{todayCat?.Name}</span>
+                <button onClick={() => go("scriptDetail", { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID })}
+                  style={{ background: C.primaryLight, border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16 }}>📋</button>
+              </div>
+              {/* 교재명 크게 */}
+              <div style={{ fontWeight: 800, fontSize: 22, color: C.text, marginBottom: 4, textAlign: "left" }}>{todaySrc?.Name}</div>
+              {/* 레슨명 */}
+              <div style={{ fontSize: 14, color: C.sub, marginBottom: 16, textAlign: "left" }}>{todayLesson.Title}</div>
+              {/* 주황 카드 - 단계 선택 */}
+              <div style={{ background: "linear-gradient(135deg,#F59E0B,#F97316)", borderRadius: 20, padding: "20px 16px" }}>
+                {/* 첫 문장 */}
+                {todayFirstItem && (
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", marginBottom: 16, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                    "{todayFirstItem.English}"
+                  </div>
+                )}
+                {/* 단계 가로 스크롤 */}
+                <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+                  {stepList.map((step) => {
+                    const stepKey = step.id.replace("step", "").toLowerCase();
+                    const isDoneStep = step.id === "stepQuiz" ? todayQp === "done" : todaySd[stepKey];
+                    return (
+                      <button key={step.id}
+                        onClick={() => go(step.id, { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID })}
+                        style={{ background: isDoneStep ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)", border: isDoneStep ? "2px solid rgba(255,255,255,0.7)" : "2px solid rgba(255,255,255,0.25)", borderRadius: 14, padding: "14px 10px", cursor: "pointer", textAlign: "center", minWidth: 80, flexShrink: 0 }}>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginBottom: 6, fontWeight: 600 }}>{step.num}단계</div>
+                        <div style={{ fontSize: 26, marginBottom: 6 }}><StepIcon type={step.type} color={isDoneStep ? "#fff" : C.primaryDark} /></div>
+                        <div style={{ fontWeight: 700, fontSize: 12, color: "#fff", lineHeight: 1.3 }}>{step.label}</div>
+                        {isDoneStep && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>✓ 완료</div>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* 구분선 + LESSONS 타이틀 */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, marginTop: 8 }}>
+          <div style={{ flex: 1, height: 1, background: C.border }} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: C.sub, letterSpacing: 1 }}>LESSONS</span>
+          <div style={{ flex: 1, height: 1, background: C.border }} />
         </div>
 
         {/* 레슨 목록 */}
@@ -549,7 +648,7 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
                           onClick={() => { go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID }); setSelectedLesson(null); }}
                           style={{ background: isDoneStep ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)", border: isDoneStep ? "2px solid rgba(255,255,255,0.7)" : "2px solid rgba(255,255,255,0.25)", borderRadius: 14, padding: "14px 10px", cursor: "pointer", textAlign: "center", minWidth: 80, flexShrink: 0 }}>
                           <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginBottom: 6, fontWeight: 600 }}>{step.num}단계</div>
-                          <div style={{ fontSize: 26, marginBottom: 6 }}>{step.icon}</div>
+                          <div style={{ fontSize: 26, marginBottom: 6 }}><StepIcon type={step.type} color={isDoneStep ? "#fff" : C.primaryDark} /></div>
                           <div style={{ fontWeight: 700, fontSize: 12, color: "#fff", lineHeight: 1.3 }}>{step.label}</div>
                           {isDoneStep && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>✓ 완료</div>}
                         </button>
@@ -649,7 +748,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, userData, setUserData })
         {steps.map((step, i) => (
           <div key={step.id} onClick={() => go(step.screen, { lessonId, sourceId })}
             style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 14, border: step.done ? `1.5px solid ${C.doneBorder}` : `1.5px solid ${C.border}`, background: step.done ? C.doneBg : C.card }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{step.icon}</div>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}><StepIcon type={step.type} color={isDoneStep ? "#fff" : C.primaryDark} /></div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 15, color: step.done ? C.done : C.text, textAlign: "left" }}>{step.label}</div>
               <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{i + 1}단계</div>
@@ -1143,7 +1242,7 @@ function CalendarScreen({ go, userData }) {
     <div style={S.page}>
       <div style={S.inner}>
         <Header title="학습 달력" onBack={() => go("home")} />
-        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: 8, marginBottom: 12, background: C.accentLight, border: `1.5px solid ${C.accent}` }}>
+        <div style={{ ...S.card, display: "flex", alignItems: "center", textAlign: "center", gap: 8, marginBottom: 12, background: C.accentLight, border: `1.5px solid ${C.accent}` }}>
           <span style={{ fontSize: 22 }}>🔥</span>
           <span style={{ fontWeight: 900, fontSize: 18, color: C.accent }}>연속 학습</span>
           <span style={{ fontWeight: 900, fontSize: 18, color: C.accent }}>{streakDays}일</span>
@@ -1173,10 +1272,7 @@ function CalendarScreen({ go, userData }) {
             })}
           </div>
         </div>
-        <div style={{ ...S.card, textAlign: "center" }}>
-          <div style={{ fontSize: 32, fontWeight: 900, color: C.primary }}>{studyDays.length}</div>
-          <div style={{ color: C.sub, fontSize: 14 }}>총 학습일</div>
-        </div>
+        
       </div>
     </div>
   );

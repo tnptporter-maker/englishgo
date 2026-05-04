@@ -197,8 +197,7 @@ function ResultCard({ correct, english }) {
       borderRadius: 12, padding: "16px", marginTop: 12, textAlign: "center",
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 22, color: correct ? "#22C55E" : C.error }}>{correct ? "⭕" : "❌"}</span>
-        <span style={{ fontWeight: 700, color: correct ? C.accent : C.error, fontSize: 15 }}>
+        <span style={{ fontWeight: 700, color: correct ? C.accent : C.error, fontSize: 20 }}>
           {correct ? "정답!" : "오답"}
         </span>
       </div>
@@ -333,10 +332,10 @@ function LoginScreen() {
     finally { setLoading(false); }
   };
   return (
-    <div style={{ ...S.page, background: "linear-gradient(160deg,#F59E0B 0%,#F97316 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ textAlign: "center", padding: "0 32px" }}>
-        <img src={duckImg} alt="QUAK" style={{ width: 120, height: 120, objectFit: "contain", marginBottom: 24, filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }} />
-        <div style={{ color: "#fff", fontSize: 40, fontWeight: 900, letterSpacing: 2, marginBottom: 8 }}>QUAK</div>
+    <div style={{ ...S.page, background: "#F59E0B", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ textAlign: "center", padding: "0 32px", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <img src={duckImg} alt="QUAK" style={{ width: 120, height: 120, objectFit: "contain", marginBottom: 32, filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }} />
+        <div style={{ color: "#fff", fontSize: 40, fontWeight: 900, letterSpacing: 2, marginBottom: 32 }}>QUAK</div>
         <button onClick={handleGoogle} disabled={loading} style={{ ...S.btn, background: "#fff", color: C.text, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", fontSize: 15, padding: "16px 32px" }}>
           {loading ? "로그인 중..." : "Google로 시작하기"}
         </button>
@@ -431,14 +430,14 @@ function HomeScreen({ go, userData, categories, sources, lessons, items, user })
           ].map((s, i) => (
             <div key={i} onClick={s.onClick} style={{
               ...S.card, marginBottom: 0, textAlign: "center", cursor: s.onClick ? "pointer" : "default",
-              padding: "16px 10px",
+              padding: "10px 5px",
               border: s.highlight ? `2px solid ${C.accent}` : `1.5px solid ${C.border}`,
               background: s.highlight ? C.accentLight : C.card,
-              display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 110,
+              display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 90,
             }}>
-              <div style={{ fontSize: 22 }}>{s.icon}</div>
+              <div style={{ fontSize: 20 }}>{s.icon}</div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 24, color: s.highlight ? C.accent : C.primary, marginBottom: 2 }}>{s.value}</div>
+                <div style={{ fontWeight: 800, fontSize: 20, color: s.highlight ? C.accent : C.primary, marginBottom: 2 }}>{s.value}</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: C.sub }}>{s.label}</div>
               </div>
             </div>
@@ -972,13 +971,13 @@ function DiaryListScreen({ go, userData, setUserData }) {
       {sorted.map((d) => (
         <div key={d.id} style={{ ...S.card, cursor: "pointer" }} onClick={() => go("diaryDetail", { diaryId: d.id })}>
           {/* 상단: 휴지통 */}
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 2 }}>
+          <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 2 }}>
             <button onClick={(e) => { e.stopPropagation(); handleDelete(d.id); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: C.sub, padding: 0 }}>🗑️</button>
           </div>
           {/* 날짜 */}
           <div style={{ fontSize: 12, color: C.sub, marginBottom: 6 }}>{d.date} · {d.sourceName}</div>
           {/* 레슨명 가운데 정렬 */}
-          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, textAlign: "center" }}>{d.lessonTitle}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, textAlign: "left" }}>{d.lessonTitle}</div>
         </div>
       ))}
     </div></div>

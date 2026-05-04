@@ -992,9 +992,9 @@ function DiaryDetailScreen({ go, nav, userData }) {
   if (!diary) return <div style={S.page}><div style={S.inner}><Header title="다이어리" onBack={() => go("diaryList")} /><p>찾을 수 없습니다.</p></div></div>;
   return (
     <div style={S.page}><div style={S.inner}>
-      <Header title="다이어리 상세" onBack={() => go("diaryList")} />
+      <Header title={diary.date} onBack={() => go("diaryList")} />
       <div style={{ ...S.card }}>
-        <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>{diary.date} · {diary.sourceName}</div>
+        <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>{diary.sourceName}</div>
         <div style={{ fontWeight: 700, fontSize: 16, color: C.text, marginBottom: 16 }}>{diary.lessonTitle}</div>
         <div style={{ fontSize: 15, color: C.text, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{diary.content}</div>
       </div>

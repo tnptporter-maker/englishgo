@@ -969,15 +969,17 @@ function DiaryListScreen({ go, userData, setUserData }) {
       <Header title="내 다이어리" onBack={() => go("home")} />
       {sorted.length === 0 && <div style={{ textAlign: "center", color: C.sub, padding: 40 }}>아직 작성한 다이어리가 없어요</div>}
       {sorted.map((d) => (
-        <div key={d.id} style={{ ...S.card, cursor: "pointer" }} onClick={() => go("diaryDetail", { diaryId: d.id })}>
-          {/* 상단: 휴지통 */}
-          <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 2 }}>
+        <div key={d.id} style={{ ...S.card, cursor: "pointer", padding: "15px" }} onClick={() => go("diaryDetail", { diaryId: d.id })}>
+          {/* 휴지통 + 날짜 같은 줄 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <button onClick={(e) => { e.stopPropagation(); handleDelete(d.id); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: C.sub, padding: 0 }}>🗑️</button>
+            <span style={{ fontSize: 12, color: C.sub }}>{d.date}</span>
           </div>
-          {/* 날짜 */}
-          <div style={{ fontSize: 12, color: C.sub, marginBottom: 6 }}>{d.date} · {d.sourceName}</div>
-          {/* 레슨명 가운데 정렬 */}
-          <div style={{ fontWeight: 700, fontSize: 14, color: C.text, textAlign: "left" }}>{d.lessonTitle}</div>
+          {/* 교재명, 레슨명 가운데 정렬 */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>{d.sourceName}</div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{d.lessonTitle}</div>
+          </div>
         </div>
       ))}
     </div></div>

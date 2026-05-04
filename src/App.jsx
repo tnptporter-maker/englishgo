@@ -25,7 +25,7 @@ const REVIEW_INTERVALS = [1, 2, 3, 7, 14, 30, 45, 60, 75, 90];
 
 // ─── 디자인 토큰 ──────────────────────────────────────────────────────────────
 const C = {
-  bg: "#FFFDF5",
+  bg: "#FFFBE8",
   card: "#FFFFFF",
   primary: "#F59E0B",
   primaryDark: "#D97706",
@@ -172,13 +172,17 @@ function useMic(onResult) {
     accumulatedRef.current = "";
     const rec = new SR();
     rec.lang = "en-US"; rec.continuous = true; rec.interimResults = true;
+    let lastResultIdx = 0;
     rec.onresult = (e) => {
       let final = "";
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) final += e.results[i][0].transcript + " ";
+      for (let i = lastResultIdx; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          final += e.results[i][0].transcript + " ";
+          lastResultIdx = i + 1;
+        }
       }
       if (final.trim()) {
-        accumulatedRef.current = final.trim();
+        accumulatedRef.current = (accumulatedRef.current + " " + final).trim();
         onResult(accumulatedRef.current);
       }
     };
@@ -384,45 +388,67 @@ function LoginScreen() {
 // ════════════════════════════════════════════════════════════════════════════════
 function HomeScreen({ go, user, userData, categories, sources, lessons, items }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState(null);
   const { studyDays = [], quizProgress = {} } = userData;
 
+  // 레슨을 교재 Order 기준으로 정렬
+  const sortedLessons = [...lessons].sort((a, b) => {
+    const srcA = sources.find(s => s.SourceID === a.SourceID);
+    const srcB = sources.find(s => s.SourceID === b.SourceID);
+    const srcOrder = Number(srcA?.Order || 0) - Number(srcB?.Order || 0);
+    if (srcOrder !== 0) return srcOrder;
+    return Number(a.Order || 0) - Number(b.Order || 0);
+  });
+
+  // 오늘의 레슨 (진행중 → 다음 레슨 → 첫 레슨 순)
   const todayLesson = (() => {
-    if (!lessons.length) return null;
-    const inProgress = lessons.find((l) => {
+    if (!sortedLessons.length) return null;
+    const inProgress = sortedLessons.find((l) => {
       const key = `${l.LessonID}_${l.SourceID}`;
       const p = quizProgress[key];
       return p && p !== "done";
     });
     if (inProgress) return inProgress;
-    const doneKeys = Object.entries(quizProgress).filter(([, v]) => v === "done").map(([k]) => k);
-    if (doneKeys.length) {
-      for (const key of doneKeys) {
-        const [lessonId, sourceId] = key.split("_");
-        const srcLessons = lessons.filter((l) => l.SourceID === sourceId).sort((a, b) => Number(a.Order) - Number(b.Order));
-        const idx = srcLessons.findIndex((l) => l.LessonID === lessonId);
+    for (const l of sortedLessons) {
+      const key = `${l.LessonID}_${l.SourceID}`;
+      if (quizProgress[key] === "done") {
+        const srcLessons = sortedLessons.filter(x => x.SourceID === l.SourceID);
+        const idx = srcLessons.findIndex(x => x.LessonID === l.LessonID);
         if (idx >= 0 && idx + 1 < srcLessons.length) {
           const next = srcLessons[idx + 1];
           if (quizProgress[`${next.LessonID}_${next.SourceID}`] !== "done") return next;
         }
       }
     }
-    return lessons[0];
+    return sortedLessons[0];
   })();
 
   const todayLessonSource = todayLesson ? sources.find((s) => s.SourceID === todayLesson.SourceID) : null;
+  const todayLessonFirstItem = todayLesson ? items.find(it => it.LessonID === todayLesson.LessonID) : null;
 
-  const handleTodayLesson = () => {
-    if (!todayLesson) return;
-    const key = `${todayLesson.LessonID}_${todayLesson.SourceID}`;
-    const qp = quizProgress[key];
-    if (qp && qp !== "done") {
-      let screen = "stepQuiz";
-      if (qp.startsWith("preview_")) screen = "stepRead";
-      else if (qp.startsWith("build_")) screen = "stepBuild";
-      go(screen, { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID, resume: true });
-    } else {
-      go("lessonSteps", { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID });
+  // 연속 학습일 계산
+  const streakDays = (() => {
+    if (!studyDays.length) return 0;
+    const sorted = [...studyDays].sort((a, b) => b.localeCompare(a));
+    let streak = 0;
+    let check = new Date();
+    for (let i = 0; i < 365; i++) {
+      const ds = check.toISOString().slice(0, 10);
+      if (sorted.includes(ds)) { streak++; check.setDate(check.getDate() - 1); }
+      else if (i === 0) { check.setDate(check.getDate() - 1); continue; }
+      else break;
     }
+    return streak;
+  })();
+
+  const handleLessonClick = (lesson) => {
+    setSelectedLesson(selectedLesson?.LessonID === lesson.LessonID ? null : lesson);
+  };
+
+  const handleStepGo = (screen) => {
+    if (!selectedLesson) return;
+    go(screen, { lessonId: selectedLesson.LessonID, sourceId: selectedLesson.SourceID });
+    setSelectedLesson(null);
   };
 
   const handleDeleteAccount = async () => {
@@ -431,26 +457,25 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items })
     catch (e) { alert("탈퇴 실패. 재로그인 후 시도해주세요."); }
   };
 
-  // 다음 레슨 목록 (최근 레슨 3개)
-  const recentLessons = lessons.slice(0, 5);
+  const steps = [
+    { id: "stepRead", icon: "🗣️", label: "따라읽기" },
+    { id: "stepBuild", icon: "🧩", label: "문장 만들기" },
+    { id: "stepQuiz", icon: "🎤", label: "Speaking Test" },
+    { id: "stepDiary", icon: "📔", label: "Diary 쓰기" },
+  ];
 
   return (
     <div style={S.page}>
       <div style={S.inner}>
         {/* 헤더 */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          {/* Course 버튼 */}
-          <button onClick={() => go("courseSelect")} style={{ background: C.primaryLight, border: "none", borderRadius: 20, padding: "8px 16px", fontWeight: 700, fontSize: 14, color: C.primaryDark, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, minHeight: 48 }}>
+          <button onClick={() => go("courseSelect")} style={{ background: C.primaryLight, border: "none", borderRadius: 20, padding: "8px 16px", fontWeight: 700, fontSize: 14, color: C.primaryDark, cursor: "pointer" }}>
             Course ▾
           </button>
-
-          {/* 중앙: 불꽃+학습일 */}
-          <div style={{ display: "flex", alignItems: "center", gap: 4, background: C.accentLight, borderRadius: 20, padding: "5px 12px" }}>
+          <div onClick={() => go("calendar")} style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4, background: C.accentLight, borderRadius: 20, padding: "8px 14px", cursor: "pointer" }}>
             <span style={{ fontSize: 18 }}>🔥</span>
-            <span style={{ fontWeight: 800, fontSize: 16, color: C.accent }}>{studyDays.length}</span>
+            <span style={{ fontWeight: 800, fontSize: 16, color: C.accent }}>{streakDays}</span>
           </div>
-
-          {/* 프로필 */}
           <div style={{ position: "relative" }}>
             <img src={user?.photoURL || duckImg} alt="profile" onClick={() => setMenuOpen((v) => !v)}
               style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", cursor: "pointer", border: `2.5px solid ${C.primary}` }} />
@@ -463,48 +488,103 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items })
           </div>
         </div>
 
-        {/* 오늘의 레슨 */}
+        {/* 오늘의 레슨 - 스픽 스타일 */}
         {todayLesson && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>Today's Lesson</div>
-            <div style={{ ...S.card, marginBottom: 0, background: "linear-gradient(135deg,#F59E0B,#F97316)", padding: "20px" }}>
-              {/* 교재명 */}
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>{todayLessonSource?.Name}</div>
-              {/* 레슨명 + 책 아이콘 */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <div style={{ fontWeight: 800, fontSize: 18, color: "#fff", flex: 1, lineHeight: 1.3 }}>{todayLesson.Title}</div>
-                <button onClick={(e) => { e.stopPropagation(); go("scriptDetail", { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID }); }}
-                  style={{ background: "rgba(255,255,255,0.25)", border: "none", borderRadius: 10, width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 20, flexShrink: 0, marginLeft: 10 }}>📋</button>
+          <div style={{ marginBottom: 24 }}>
+            {/* 교재명 */}
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 4 }}>{todayLessonSource?.Name}</div>
+            {/* 레슨명 + 책 아이콘 */}
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ fontWeight: 800, fontSize: 20, color: C.text, flex: 1, lineHeight: 1.3 }}>{todayLesson.Title}</div>
+              <button onClick={(e) => { e.stopPropagation(); go("scriptDetail", { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID }); }}
+                style={{ background: C.primaryLight, border: "none", borderRadius: 10, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18, flexShrink: 0, marginLeft: 10 }}>📋</button>
+            </div>
+            {/* 첫 문장 미리보기 */}
+            {todayLessonFirstItem && (
+              <div style={{ fontSize: 13, color: C.sub, marginBottom: 16, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                "{todayLessonFirstItem.English}"
               </div>
-              <button onClick={handleTodayLesson} style={{ background: "rgba(255,255,255,0.25)", border: "none", borderRadius: 10, padding: "10px 20px", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
-                학습 시작 →
-              </button>
+            )}
+            {/* 하위 학습 선택 박스 */}
+            <div style={{ background: "linear-gradient(135deg,#F59E0B,#F97316)", borderRadius: 16, padding: "20px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {steps.map((step) => {
+                  const key = `${todayLesson.LessonID}_${todayLesson.SourceID}`;
+                  const sd = userData.stepDone?.[key] || {};
+                  const isDone = step.id === "stepQuiz" ? quizProgress[key] === "done" : sd[step.id.replace("step","").toLowerCase()];
+                  return (
+                    <button key={step.id} onClick={() => go(step.id, { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID })}
+                      style={{ background: isDone ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.2)", border: isDone ? "2px solid rgba(255,255,255,0.6)" : "2px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "14px 10px", cursor: "pointer", textAlign: "center" }}>
+                      <div style={{ fontSize: 22, marginBottom: 4 }}>{step.icon}</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: "#fff" }}>{step.label}</div>
+                      {isDone && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>완료 ✓</div>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
 
-        {/* 레슨 목록 */}
+        {/* 레슨 목록 - 스픽 스타일 */}
         <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Lessons</div>
-        {recentLessons.map((l) => {
+        {sortedLessons.map((l) => {
           const source = sources.find((s) => s.SourceID === l.SourceID);
           const key = `${l.LessonID}_${l.SourceID}`;
           const qp = quizProgress[key];
           const isDone = qp === "done";
           const isInProgress = qp && qp !== "done";
+          const isSelected = selectedLesson?.LessonID === l.LessonID;
+          const firstItem = items.find(it => it.LessonID === l.LessonID);
+          const sd = userData.stepDone?.[key] || {};
+
           return (
-            <div key={l.LessonID} style={{ ...S.card, marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
-              onClick={() => go("lessonSteps", { lessonId: l.LessonID, sourceId: l.SourceID })}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: C.sub, marginBottom: 4 }}>{source?.Name}</div>
-                <div style={{ fontWeight: 700, fontSize: 15, color: C.text, textAlign: "left" }}>{l.Title}</div>
-                <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                  {isDone && <Badge label="완료" color={C.done} bg={C.doneBg} />}
-                  {isInProgress && <Badge label="진행중" color={C.accent} bg={C.accentLight} />}
+            <div key={l.LessonID} style={{ marginBottom: 10 }}>
+              {/* 레슨 카드 */}
+              <div style={{ ...S.card, marginBottom: 0, cursor: "pointer", border: isSelected ? `2px solid ${C.primary}` : `1.5px solid ${C.border}` }}
+                onClick={() => handleLessonClick(l)}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: C.sub }}>{source?.Name}</span>
+                      <button onClick={(e) => { e.stopPropagation(); go("scriptDetail", { lessonId: l.LessonID, sourceId: l.SourceID }); }}
+                        style={{ background: C.primaryLight, border: "none", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15, flexShrink: 0 }}>📋</button>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: C.text, textAlign: "left" }}>{l.Title}</div>
+                    <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                      {isDone && <Badge label="완료" color={C.done} bg={C.doneBg} />}
+                      {isInProgress && <Badge label="진행중" color={C.accent} bg={C.accentLight} />}
+                    </div>
+                  </div>
+                  <span style={{ color: C.sub, fontSize: 18, transform: isSelected ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}>›</span>
                 </div>
               </div>
-              {/* 책 아이콘 */}
-              <button onClick={(e) => { e.stopPropagation(); go("scriptDetail", { lessonId: l.LessonID, sourceId: l.SourceID }); }}
-                style={{ background: C.primaryLight, border: "none", borderRadius: 10, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18, flexShrink: 0 }}>📋</button>
+
+              {/* 하위 학습 선택 - 선택된 레슨만 표시 */}
+              {isSelected && (
+                <div style={{ background: "linear-gradient(135deg,#F59E0B,#F97316)", borderRadius: "0 0 16px 16px", padding: "16px" }}>
+                  {/* 첫 문장 미리보기 */}
+                  {firstItem && (
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", marginBottom: 14, fontStyle: "italic", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      "{firstItem.English}"
+                    </div>
+                  )}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {steps.map((step) => {
+                      const stepKey = step.id.replace("step", "").toLowerCase();
+                      const isDoneStep = step.id === "stepQuiz" ? qp === "done" : sd[stepKey];
+                      return (
+                        <button key={step.id} onClick={() => { go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID }); setSelectedLesson(null); }}
+                          style={{ background: isDoneStep ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.2)", border: isDoneStep ? "2px solid rgba(255,255,255,0.6)" : "2px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "12px 8px", cursor: "pointer", textAlign: "center" }}>
+                          <div style={{ fontSize: 20, marginBottom: 4 }}>{step.icon}</div>
+                          <div style={{ fontWeight: 700, fontSize: 12, color: "#fff" }}>{step.label}</div>
+                          {isDoneStep && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>완료 ✓</div>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -1037,6 +1117,65 @@ function DiaryTab({ userData, setUserData, go }) {
   );
 }
 
+function CalendarScreen({ go, userData }) {
+  const { studyDays = [] } = userData;
+  const [monthOffset, setMonthOffset] = useState(0);
+  const base = new Date(); base.setMonth(base.getMonth() + monthOffset);
+  const year = base.getFullYear(); const month = base.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = Array(firstDay).fill(null).concat(Array.from({ length: daysInMonth }, (_, i) => i + 1));
+
+  const streakDays = (() => {
+    if (!studyDays.length) return 0;
+    const sorted = [...studyDays].sort((a, b) => b.localeCompare(a));
+    let streak = 0;
+    let check = new Date();
+    for (let i = 0; i < 365; i++) {
+      const ds = check.toISOString().slice(0, 10);
+      if (sorted.includes(ds)) { streak++; check.setDate(check.getDate() - 1); }
+      else if (i === 0) { check.setDate(check.getDate() - 1); continue; }
+      else break;
+    }
+    return streak;
+  })();
+
+  return (
+    <div style={S.page}><div style={S.inner}>
+      <Header title="학습 달력" onBack={() => go("home")} />
+      {/* 연속 학습일 */}
+      <div style={{ ...S.card, textAlign: "center", marginBottom: 12, background: C.accentLight, border: `1.5px solid ${C.accent}` }}>
+        <span style={{ fontSize: 28 }}>🔥</span>
+        <div style={{ fontWeight: 900, fontSize: 28, color: C.accent, marginTop: 4 }}>{streakDays}일</div>
+        <div style={{ fontSize: 13, color: C.sub, marginTop: 2 }}>연속 학습</div>
+      </div>
+      {/* 달력 */}
+      <div style={{ ...S.card }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <button onClick={() => setMonthOffset((v) => v - 1)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer" }}>‹</button>
+          <span style={{ fontWeight: 700, fontSize: 16 }}>{year}년 {month + 1}월</span>
+          <button onClick={() => setMonthOffset((v) => v + 1)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer" }}>›</button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 8 }}>
+          {["일","월","화","수","목","금","토"].map((d) => <div key={d} style={{ fontSize: 11, color: C.sub, fontWeight: 700, padding: "4px 0", textAlign: "center" }}>{d}</div>)}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
+          {cells.map((d, i) => {
+            if (!d) return <div key={i} />;
+            const ds = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+            const studied = studyDays.includes(ds); const isToday = ds === today();
+            return <div key={i} style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", fontSize: 13, fontWeight: studied ? 700 : 400, background: studied ? C.primary : isToday ? C.primaryLight : "transparent", color: studied ? "#fff" : isToday ? C.primaryDark : C.text }}>{d}</div>;
+          })}
+        </div>
+      </div>
+      <div style={{ ...S.card, textAlign: "center" }}>
+        <div style={{ fontSize: 32, fontWeight: 900, color: C.primary }}>{studyDays.length}</div>
+        <div style={{ color: C.sub, fontSize: 14 }}>총 학습일</div>
+      </div>
+    </div></div>
+  );
+}
+
 function DiaryDetailScreen({ go, nav, userData }) {
   const { diaryId } = nav;
   const diary = userData.diaries?.find((d) => d.id === diaryId);
@@ -1243,6 +1382,7 @@ export default function App() {
       scriptSource: <ScriptSourceScreen {...shared} />,
       scriptDetail: <ScriptDetailScreen {...shared} />,
       diaryDetail: <DiaryDetailScreen {...shared} />,
+      calendar: <CalendarScreen {...shared} />,
     };
     return screenMap[screen] || null;
   }

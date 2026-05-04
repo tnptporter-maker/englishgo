@@ -159,40 +159,63 @@ function useMic(onResult) {
     accumulatedRef.current = "";
   }, []);
 
+  const startNewRec = useCallback((SR) => {
+    const rec = new SR();
+    rec.lang = "en-US"; rec.continuous = true; rec.interimResults = true;
+    rec.onresult = (e) => {
+      let final = "";
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          final += e.results[i][0].transcript + " ";
+        }
+      }
+      if (final.trim()) {
+        accumulatedRef.current = final.trim();
+        onResult(accumulatedRef.current);
+      }
+    };
+    rec.onend = () => {
+      if (activeRef.current) {
+        restartRef.current = setTimeout(() => {
+          try {
+            const newRec = startNewRec(SR);
+            recRef.current = newRec;
+            newRec.start();
+          } catch {}
+        }, 200);
+      } else {
+        setListening(false);
+      }
+    };
+    rec.onerror = (err) => {
+      if (["no-speech", "audio-capture", "network"].includes(err.error)) {
+        if (activeRef.current) {
+          restartRef.current = setTimeout(() => {
+            try {
+              const newRec = startNewRec(SR);
+              recRef.current = newRec;
+              newRec.start();
+            } catch {}
+          }, 200);
+        }
+      }
+    };
+    return rec;
+  }, [onResult]);
+
   const startMic = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return alert("Chrome 브라우저를 사용해주세요.");
     stopSpeak();
     activeRef.current = true;
     accumulatedRef.current = "";
-    const rec = new SR();
-    rec.lang = "en-US"; rec.continuous = true; rec.interimResults = true;
-    let lastResultIdx = 0;
-    rec.onresult = (e) => {
-      let final = "";
-      for (let i = lastResultIdx; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          final += e.results[i][0].transcript + " ";
-          lastResultIdx = i + 1;
-        }
-      }
-      if (final.trim()) {
-        accumulatedRef.current = (accumulatedRef.current + " " + final).trim();
-        onResult(accumulatedRef.current);
-      }
-    };
-    rec.onend = () => {
-      if (activeRef.current) restartRef.current = setTimeout(() => { try { rec.start(); } catch {} }, 100);
-      else setListening(false);
-    };
-    rec.onerror = (err) => {
-      if (["no-speech", "audio-capture", "network"].includes(err.error)) {
-        if (activeRef.current) restartRef.current = setTimeout(() => { try { rec.start(); } catch {} }, 100);
-      }
-    };
-    recRef.current = rec;
-    try { rec.start(); setListening(true); } catch {}
-  }, [onResult]);
+    try {
+      const rec = startNewRec(SR);
+      recRef.current = rec;
+      rec.start();
+      setListening(true);
+    } catch {}
+  }, [startNewRec]);
 
   useEffect(() => () => stopMic(), [stopMic]);
   return { listening, startMic, stopMic };
@@ -385,6 +408,7 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null);
   const lessonRefs = useRef({});
+  const autoScrolled = useRef(false);
   const { studyDays = [], quizProgress = {} } = userData;
 
   // 선택된 교재의 레슨만 Order 기준 정렬
@@ -503,8 +527,15 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, minHeight: 48 }}>
           {/* Course 버튼 - 교재 선택 팝업 */}
           <button onClick={() => go("courseSelect")} style={{ background: C.primaryLight, border: "none", borderRadius: 20, padding: "8px 16px", fontWeight: 700, fontSize: 14, color: C.primaryDark, cursor: "pointer" }}>
-            {selectedSource ? selectedSource.Name.slice(0, 6) + "…" : "Course ▾"}
+            Course ▾
           </button>
+          {/* 교재명 표시 */}
+        {selectedSource && (
+          <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, marginBottom: 12, marginTop: -16 }}>
+            {categories.find(c => c.CategoryID === selectedSource.CategoryID)?.Name} · {selectedSource.Name}
+          </div>
+        )}
+
           {/* 중앙 불꽃 */}
           <div onClick={() => go("calendar")} style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4, background: C.accentLight, borderRadius: 20, padding: "8px 14px", cursor: "pointer" }}>
             <span style={{ fontSize: 18 }}>🔥</span>
@@ -534,10 +565,13 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
           const isTodaySelected = selectedLesson?.LessonID === todayLesson.LessonID;
           return (
             <div style={{ marginBottom: 20 }}>
-              {/* 카테고리명 + 스크립트 버튼 */}
+              {/* 카테고리명 + 스크립트 버튼 (선택된 레슨 기준) */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.sub }}>{todayCat?.Name}</span>
-                <button onClick={() => go("scriptDetail", { lessonId: todayLesson.LessonID, sourceId: todayLesson.SourceID })}
+                <button onClick={() => {
+                  const target = selectedLesson || todayLesson;
+                  go("scriptDetail", { lessonId: target.LessonID, sourceId: target.SourceID, fromHome: true });
+                }}
                   style={{ background: C.primaryLight, border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16 }}>📋</button>
               </div>
               {/* 교재명 크게 */}
@@ -590,6 +624,7 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
           const isDone = qp === "done";
           const isInProgress = qp && qp !== "done";
           const isSelected = selectedLesson?.LessonID === l.LessonID;
+          const isTodayLesson = todayLesson?.LessonID === l.LessonID;
           const firstItem = items.find(it => it.LessonID === l.LessonID);
           const sd = userData.stepDone?.[key] || {};
 
@@ -597,7 +632,15 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
             <div key={l.LessonID} style={{ marginBottom: 10 }}>
               {/* 레슨 카드 */}
               <div
-                ref={(el) => { lessonRefs.current[l.LessonID] = el; }}
+                ref={(el) => {
+                  lessonRefs.current[l.LessonID] = el;
+                  if (isTodayLesson && el && !autoScrolled.current) {
+                    setTimeout(() => {
+                      el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      autoScrolled.current = true;
+                    }, 300);
+                  }
+                }}
                 style={{ ...S.card, marginBottom: 0, cursor: "pointer", border: isSelected ? `2px solid ${C.primary}` : `1.5px solid ${C.border}` }}
                 onClick={() => {
                   if (isSelected) { setSelectedLesson(null); return; }
@@ -607,19 +650,11 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
                   }, 50);
                 }}
               >
-                {/* 1행: 카테고리명(좌) + 스크립트(우) */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, color: C.sub, fontWeight: 600 }}>{category?.Name}</span>
-                  <button onClick={(e) => { e.stopPropagation(); go("scriptDetail", { lessonId: l.LessonID, sourceId: l.SourceID }); }}
-                    style={{ background: C.primaryLight, border: "none", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15, flexShrink: 0 }}>📋</button>
-                </div>
-                {/* 2행: 교재명(좌) + 화살표(우) */}
+                {/* 레슨명 + 화살표 */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: C.text, textAlign: "left", flex: 1 }}>{source?.Name}</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: C.text, textAlign: "left", flex: 1 }}>{l.Title}</div>
                   <span style={{ color: C.sub, fontSize: 18, marginLeft: 8, transform: isSelected ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}>›</span>
                 </div>
-                {/* 3행: 레슨명 */}
-                <div style={{ fontSize: 13, color: C.sub, marginTop: 4, textAlign: "left" }}>{l.Title}</div>
                 {/* 뱃지 */}
                 {(isDone || isInProgress) && (
                   <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
@@ -631,26 +666,21 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
 
               {/* 선택된 레슨 펼침 */}
               {isSelected && (
-                <div style={{ background: "linear-gradient(135deg,#F59E0B,#F97316)", borderRadius: "0 0 16px 16px", padding: "14px 16px 16px" }}>
-                  {/* 첫 문장 미리보기 */}
-                  {firstItem && (
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", marginBottom: 14, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      "{firstItem.English}"
-                    </div>
-                  )}
-                  {/* 단계 가로 스크롤 */}
-                  <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+                <div style={{ background: C.primaryLight, borderRadius: "0 0 16px 16px", padding: "12px 16px 16px" }}>
+                  <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
                     {stepList.map((step) => {
                       const stepKey = step.id.replace("step", "").toLowerCase();
                       const isDoneStep = step.id === "stepQuiz" ? qp === "done" : sd[stepKey];
                       return (
                         <button key={step.id}
                           onClick={() => { go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID }); setSelectedLesson(null); }}
-                          style={{ background: isDoneStep ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)", border: isDoneStep ? "2px solid rgba(255,255,255,0.7)" : "2px solid rgba(255,255,255,0.25)", borderRadius: 14, padding: "14px 10px", cursor: "pointer", textAlign: "center", minWidth: 80, flexShrink: 0 }}>
-                          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginBottom: 6, fontWeight: 600 }}>{step.num}단계</div>
-                          <div style={{ fontSize: 26, marginBottom: 6 }}><StepIcon type={step.type} color={isDoneStep ? "#fff" : C.primaryDark} /></div>
-                          <div style={{ fontWeight: 700, fontSize: 12, color: "#fff", lineHeight: 1.3 }}>{step.label}</div>
-                          {isDoneStep && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>✓ 완료</div>}
+                          style={{ background: isDoneStep ? C.primary : "#fff", border: `1.5px solid ${isDoneStep ? C.primary : C.border}`, borderRadius: 14, padding: "14px 10px", cursor: "pointer", textAlign: "center", minWidth: 76, flexShrink: 0 }}>
+                          <div style={{ fontSize: 11, color: isDoneStep ? "rgba(255,255,255,0.8)" : C.sub, marginBottom: 8, fontWeight: 600 }}>{step.num}단계</div>
+                          <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}>
+                            <StepIcon type={step.type} color={isDoneStep ? "#fff" : C.primaryDark} />
+                          </div>
+                          <div style={{ fontWeight: 700, fontSize: 11, color: isDoneStep ? "#fff" : C.text, lineHeight: 1.3 }}>{step.label}</div>
+                          {isDoneStep && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", marginTop: 4 }}>✓</div>}
                         </button>
                       );
                     })}
@@ -680,25 +710,20 @@ function CourseSelectScreen({ go, categories, sources, lessons, setSelectedSourc
         <Header title="교재 선택" onBack={() => go("home")} />
         {catGroups.map(({ cat, srcs }) => (
           <div key={cat.CategoryID} style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8 }}>{cat.Name}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.done, marginBottom: 8 }}>{cat.Name}</div>
             {srcs.map((src) => (
               <div key={src.SourceID}
                 onClick={() => { setSelectedSourceId(src.SourceID); go("home"); }}
                 style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left" }}>{src.Name}</div>
-                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
+                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2, textAlign: "left" }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
                 </div>
                 <span style={{ color: C.sub, fontSize: 20 }}>›</span>
               </div>
             ))}
           </div>
         ))}
-        {/* 전체 보기 */}
-        <div onClick={() => { setSelectedSourceId(null); go("home"); }}
-          style={{ ...S.card, cursor: "pointer", textAlign: "center" }}>
-          <span style={{ fontWeight: 700, color: C.primary }}>전체 교재 보기</span>
-        </div>
       </div>
     </div>
   );
@@ -805,7 +830,9 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   const { listening, startMic, stopMic } = useMic((text) => {
     setSpokenText(text);
     const score = similarityScore(curItem?.English || "", text);
-    setFeedback(score >= 0.8 ? "잘 했어요! 👍" : "");
+    if (score >= 0.8) setFeedback("잘 했어요! 👍");
+    else if (text.trim().length > 0) setFeedback("다시 해보세요 🔄");
+    else setFeedback("");
   });
 
   const handleNext = () => {
@@ -828,8 +855,16 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title={`따라읽기 ${round}/${totalRounds}회차`} onQuit={() => { stopMic(); stopSpeak(); go("home"); }} />
+        <Header title="따라읽기" onQuit={() => { stopMic(); stopSpeak(); go("home"); }} />
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
+        {/* 회차 표시 */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          {[1, 2].map((r) => (
+            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round === r ? C.primary : C.borderLight, color: round === r ? "#fff" : C.sub }}>
+              {r}회차
+            </div>
+          ))}
+        </div>
         <div style={{ ...S.card, textAlign: "center", marginBottom: 16 }}>
           <div style={{ fontSize: 13, color: C.sub, marginBottom: 12 }}>한국어</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 20, lineHeight: 1.6 }}>{curItem.Korean}</div>
@@ -838,14 +873,14 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
           <div style={{ fontSize: 18, fontWeight: 700, color: C.primaryDark, lineHeight: 1.5 }}>{curItem.English}</div>
         </div>
         <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-          <button onClick={() => speak(curItem.English)} style={{ ...S.btn, ...S.btnSecondary, flex: 1, padding: "12px" }}>🔊 듣기</button>
-          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? C.accent : C.primary, color: "#fff" }}>
+          <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#EDE1D6", color: "#000", fontWeight: 700, fontSize: 14 }}>🔊 듣기</button>
+          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? C.accent : "#CCDA9C", color: listening ? "#fff" : "#4A5E2A", fontWeight: 700, fontSize: 14 }}>
             {listening ? "⏹ 중지" : "🎤 따라읽기"}
           </button>
         </div>
-        {spokenText && <div style={{ ...S.card, fontSize: 13, color: C.sub, marginBottom: 12 }}>들린 말: {spokenText}</div>}
+        {spokenText && <div style={{ ...S.card, fontSize: 13, color: C.sub, marginBottom: 12 }}>내 답 : {spokenText}</div>}
         {feedback && <div style={{ textAlign: "center", color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 12 }}>{feedback}</div>}
-        <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>
+        <button onClick={handleNext} style={{ ...S.btn, background: C.accent, color: "#fff" }}>
           {idx + 1 < total ? "다음" : round < totalRounds ? "2회차 시작" : "완료! 문장 만들기"}
         </button>
       </div>
@@ -1327,7 +1362,7 @@ function ScriptTab({ go, sources, lessons, categories }) {
                 style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left" }}>{src.Name}</div>
-                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
+                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2, textAlign: "left" }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
                 </div>
                 <span style={{ color: C.sub, fontSize: 20 }}>›</span>
               </div>
@@ -1376,6 +1411,7 @@ function ScriptDetailScreen({ go, nav, lessons, sources, items, userData, setUse
   };
   const handleBack = () => {
     if (nav.fromHome) go("home");
+    else if (nav.fromLesson) go("home");
     else go("scriptSource", { sourceId });
   };
   return (

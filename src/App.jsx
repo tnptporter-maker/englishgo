@@ -372,8 +372,8 @@ function LoginScreen() {
       <div style={{ textAlign: "center", padding: "0 32px", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <img src={duckImg} alt="QUAK" style={{ width: 120, height: 120, objectFit: "contain", marginBottom: 32, filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }} />
         <div style={{ color: "#fff", fontSize: 40, fontWeight: 900, letterSpacing: 2, marginBottom: 32 }}>QUAK</div>
-        <button onClick={handleGoogle} disabled={loading} style={{ ...S.btn, background: "#fff", color: C.text, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", fontSize: 15, padding: "16px 32px" }}>
-          {loading ? "로그인 중..." : "🔑 Google로 시작하기"}
+        <button onClick={handleGoogle} disabled={loading} style={{ ...S.btn, background: "#fff", color: C.text, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", fontSize: 15, padding: "16px 20px" }}>
+          {loading ? "로그인 중..." : "Google로 시작하기"}
         </button>
       </div>
     </div>

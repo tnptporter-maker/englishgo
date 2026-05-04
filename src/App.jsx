@@ -160,19 +160,22 @@ function useMic(onResult) {
   const startMic = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return alert("Chrome 브라우저를 사용해주세요.");
+    stopSpeak();
     activeRef.current = true;
     const rec = new SR();
-    rec.lang = "en-US"; rec.continuous = true; rec.interimResults = false;
+    rec.lang = "en-US"; rec.continuous = true; rec.interimResults = true;
     rec.onresult = (e) => {
       const t = Array.from(e.results).map((r) => r[0].transcript).join(" ");
       onResult(t);
     };
     rec.onend = () => {
-      if (activeRef.current) restartRef.current = setTimeout(() => { try { rec.start(); } catch {} }, 200);
+      if (activeRef.current) restartRef.current = setTimeout(() => { try { rec.start(); } catch {} }, 100);
       else setListening(false);
     };
-    rec.onerror = () => {
-      if (activeRef.current) restartRef.current = setTimeout(() => { try { rec.start(); } catch {} }, 300);
+    rec.onerror = (err) => {
+      if (err.error === "no-speech" || err.error === "audio-capture" || err.error === "network") {
+        if (activeRef.current) restartRef.current = setTimeout(() => { try { rec.start(); } catch {} }, 100);
+      }
     };
     recRef.current = rec;
     try { rec.start(); setListening(true); } catch {}
@@ -186,13 +189,15 @@ function useMic(onResult) {
 function ResultCard({ correct, english }) {
   return (
     <div style={{
-      background: correct ? C.successBg : C.errorBg,
-      border: `1.5px solid ${correct ? C.successBorder : C.errorBorder}`,
+      background: correct ? C.accentLight : C.errorBg,
+      border: `1.5px solid ${correct ? C.accent : C.errorBorder}`,
       borderRadius: 12, padding: "16px", marginTop: 12, textAlign: "center",
     }}>
-      <div style={{ fontSize: 24, marginBottom: 6 }}>{correct ? "✅" : "❌"}</div>
-      <div style={{ fontWeight: 700, color: correct ? C.success : C.error, fontSize: 15, marginBottom: 6 }}>
-        {correct ? "정답!" : "오답"}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 22, color: correct ? "#22C55E" : C.error }}>{correct ? "⭕" : "❌"}</span>
+        <span style={{ fontWeight: 700, color: correct ? C.accent : C.error, fontSize: 15 }}>
+          {correct ? "정답!" : "오답"}
+        </span>
       </div>
       <div style={{ color: C.text, fontWeight: 600, fontSize: 15 }}>{english}</div>
     </div>
@@ -291,7 +296,7 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone,
         <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.6, marginBottom: 14 }}>{curItem.Korean}</div>
         <button onClick={() => speak(curItem.English)} style={{ background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, color: C.primaryDark, fontWeight: 600 }}>🔊 정답 듣기</button>
       </div>
-      <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, background: listening ? C.accent : C.green, color: "#fff", marginBottom: 12, fontSize: 16, padding: "16px" }}>
+      <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, background: listening ? C.accent : C.primary, color: "#fff", marginBottom: 12, fontSize: 16, padding: "16px" }}>
         {listening ? "⏹ 녹음 중지" : "🎤 영어로 말하기"}
       </button>
       <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="또는 직접 영어로 입력하세요"
@@ -339,7 +344,7 @@ function LoginScreen() {
 }
 
 // ─── HomeScreen ────────────────────────────────────────────────────────────────
-function HomeScreen({ go, userData, categories, sources, lessons, items }) {
+function HomeScreen({ go, userData, categories, sources, lessons, items, user }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { progress = {}, studyDays = [], quizProgress = {}, favorites = {}, diaries = [] } = userData;
 
@@ -388,7 +393,7 @@ function HomeScreen({ go, userData, categories, sources, lessons, items }) {
 
   const catGroups = categories.map((cat) => ({
     cat,
-    srcs: sources.filter((s) => s.CategoryID === cat.CategoryID && s.Type === "교재"),
+    srcs: sources.filter((s) => s.CategoryID === cat.CategoryID),
   })).filter((g) => g.srcs.length);
 
   const handleDeleteAccount = async () => {
@@ -404,7 +409,7 @@ function HomeScreen({ go, userData, categories, sources, lessons, items }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
           <div style={{ fontWeight: 900, fontSize: 26, color: C.text, letterSpacing: 1 }}>QUAK</div>
           <div style={{ position: "relative" }}>
-            <img src="./assets/profile.jpg" alt="profile" onClick={() => setMenuOpen((v) => !v)}
+            <img src={user?.photoURL || "./assets/profile.jpg"} alt="profile" onClick={() => setMenuOpen((v) => !v)}
               style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", cursor: "pointer", border: `2.5px solid ${C.primary}` }} />
             {menuOpen && (
               <div style={{ position: "absolute", right: 0, top: 48, background: "#fff", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", padding: 8, minWidth: 140, zIndex: 100 }}>
@@ -427,10 +432,13 @@ function HomeScreen({ go, userData, categories, sources, lessons, items }) {
               padding: "16px 10px",
               border: s.highlight ? `2px solid ${C.accent}` : `1.5px solid ${C.border}`,
               background: s.highlight ? C.accentLight : C.card,
+              display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 110,
             }}>
-              <div style={{ fontSize: 22, marginBottom: 10 }}>{s.icon}</div>
-              <div style={{ fontWeight: 800, fontSize: 24, color: s.highlight ? C.accent : C.primary, marginBottom: 4 }}>{s.value}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: C.sub }}>{s.label}</div>
+              <div style={{ fontSize: 22 }}>{s.icon}</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 24, color: s.highlight ? C.accent : C.primary, marginBottom: 2 }}>{s.value}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.sub }}>{s.label}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -563,7 +571,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, userData, setUserData })
   const qp = quizProgress[key]; const sd = stepDone[key] || {};
   const [resumeModal, setResumeModal] = useState(false);
 
-  useEffect(() => { if (qp && qp !== "done") setResumeModal(true); }, []);
+  useEffect(() => { if (qp && qp !== "done" && !nav.skipResume) setResumeModal(true); }, []);
 
   const getResumeScreen = () => {
     if (!qp || qp === "done") return null;
@@ -679,7 +687,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   if (!curItem) return null;
   return (
     <div style={S.page}><div style={S.inner}>
-      <Header title={`따라읽기 ${round}/${totalRounds}회차`} onQuit={() => { stopMic(); stopSpeak(); go("lessonSteps", { lessonId, sourceId }); }} />
+      <Header title={`따라읽기 ${round}/${totalRounds}회차`} onQuit={() => { stopMic(); stopSpeak(); go("lessonSteps", { lessonId, sourceId, skipResume: true }); }} />
       <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
       <div style={{ ...S.card, textAlign: "center", marginBottom: 16 }}>
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 12 }}>한국어</div>
@@ -752,7 +760,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   if (!curItem) return null;
   return (
     <div style={S.page}><div style={S.inner}>
-      <Header title="문장 만들기" onQuit={() => go("lessonSteps", { lessonId, sourceId })} />
+      <Header title="문장 만들기" onQuit={() => go("lessonSteps", { lessonId, sourceId, skipResume: true })} />
       <ProgressBar current={idx} total={shuffledItems.length} />
       <div style={{ ...S.card, marginBottom: 16 }}>
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 8 }}>한국어</div>
@@ -820,7 +828,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
 
   return (
     <div style={S.page}><div style={S.inner}>
-      <Header title="Speaking Test" onQuit={() => go("lessonSteps", { lessonId, sourceId })} />
+      <Header title="Speaking Test" onQuit={() => go("lessonSteps", { lessonId, sourceId, skipResume: true })} />
       <QuizCoreWithIdx rawItems={lessonItems} initIdx={startIdx}
         onResult={handleResult}
         onIdxChange={(i) => setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: String(i) } }))}
@@ -944,11 +952,12 @@ function DiaryListScreen({ go, userData, setUserData }) {
       {sorted.length === 0 && <div style={{ textAlign: "center", color: C.sub, padding: 40 }}>아직 작성한 다이어리가 없어요</div>}
       {sorted.map((d) => (
         <div key={d.id} style={{ ...S.card, cursor: "pointer" }} onClick={() => go("diaryDetail", { diaryId: d.id })}>
-          {/* 상단: 날짜 + 휴지통 */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <div style={{ fontSize: 12, color: C.sub }}>{d.date} · {d.sourceName}</div>
+          {/* 상단: 휴지통 */}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 2 }}>
             <button onClick={(e) => { e.stopPropagation(); handleDelete(d.id); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: C.sub, padding: 0 }}>🗑️</button>
           </div>
+          {/* 날짜 */}
+          <div style={{ fontSize: 12, color: C.sub, marginBottom: 6 }}>{d.date} · {d.sourceName}</div>
           {/* 레슨명 가운데 정렬 */}
           <div style={{ fontWeight: 700, fontSize: 14, color: C.text, textAlign: "center" }}>{d.lessonTitle}</div>
         </div>
@@ -1031,11 +1040,11 @@ export default function App() {
     return () => window.removeEventListener("popstate", handler);
   }, []);
 
-  if (authLoading) return <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ fontSize: 48 }}>🦆</div></div>;
+  if (authLoading) return <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}><img src="./assets/duck.png" alt="QUAK" style={{ width: 100, objectFit: "contain" }} /></div>;
   if (!user) return <LoginScreen />;
-  if (!dataLoaded) return <div style={{ ...S.page, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}><div style={{ fontSize: 48 }}>🦆</div><div style={{ color: C.sub }}>학습 데이터 불러오는 중...</div></div>;
+  if (!dataLoaded) return <div style={{ ...S.page, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}><img src="./assets/duck.png" alt="QUAK" style={{ width: 100, objectFit: "contain" }} /><div style={{ color: C.sub }}>학습 데이터 불러오는 중...</div></div>;
 
-  const shared = { go, nav, userData, setUserData, categories, sources, lessons, items };
+  const shared = { go, nav, userData, setUserData, categories, sources, lessons, items, user };
 
   const screens = {
     home: <HomeScreen {...shared} />,

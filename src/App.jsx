@@ -446,10 +446,9 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items })
           </button>
 
           {/* 중앙: 불꽃+학습일 */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: C.accentLight, borderRadius: 20, padding: "8px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, background: C.accentLight, borderRadius: 20, padding: "5px 12px" }}>
             <span style={{ fontSize: 18 }}>🔥</span>
             <span style={{ fontWeight: 800, fontSize: 16, color: C.accent }}>{studyDays.length}</span>
-            <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>학습일</span>
           </div>
 
           {/* 프로필 */}

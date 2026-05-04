@@ -18,6 +18,9 @@ const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 const googleProvider = new GoogleAuthProvider();
 
+import duckImg from "./assets/duck.png";
+import duck2Img from "./assets/duck2.png";
+
 const SHEET_ID = "1njMTapDCnpFP4mj6U0EEHPGumHfbBVWrljrX99_zUg0";
 const REVIEW_INTERVALS = [1, 3, 7, 14, 30, 90];
 
@@ -332,7 +335,7 @@ function LoginScreen() {
   return (
     <div style={{ ...S.page, background: "linear-gradient(160deg,#F59E0B 0%,#F97316 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
       <div style={{ textAlign: "center", padding: "0 32px" }}>
-        <img src="./assets/duck.png" alt="QUAK" style={{ width: 120, height: 120, objectFit: "contain", marginBottom: 24, filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }} />
+        <img src={duckImg} alt="QUAK" style={{ width: 120, height: 120, objectFit: "contain", marginBottom: 24, filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }} />
         <div style={{ color: "#fff", fontSize: 40, fontWeight: 900, letterSpacing: 2, marginBottom: 8 }}>QUAK</div>
         <button onClick={handleGoogle} disabled={loading} style={{ ...S.btn, background: "#fff", color: C.text, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", fontSize: 15, padding: "16px 32px" }}>
           {loading ? "로그인 중..." : "Google로 시작하기"}
@@ -456,20 +459,15 @@ function HomeScreen({ go, userData, categories, sources, lessons, items, user })
         )}
 
         {/* 학습 선택 */}
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8 }}> 학습 선택</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8 }}>학습 선택</div>
         {catGroups.map(({ cat, srcs }) => (
-          <div key={cat.CategoryID} style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 8 }}>{cat.Name}</div>
-            {srcs.map((src) => (
-              <div key={src.SourceID} onClick={() => go("Source", { sourceId: src.SourceID, catId: cat.CategoryID })}
-                style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 15, color: C.text }}>{src.Name}</div>
-                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
-                </div>
-                <span style={{ color: C.sub, fontSize: 20 }}>›</span>
-              </div>
-            ))}
+          <div key={cat.CategoryID} onClick={() => go("lesson", { catId: cat.CategoryID })}
+            style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 15, color: C.text }}>{cat.Name}</div>
+              <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{srcs.length}개 교재</div>
+            </div>
+            <span style={{ color: C.sub, fontSize: 20 }}>›</span>
           </div>
         ))}
 
@@ -530,12 +528,34 @@ function CalendarScreen({ go, userData }) {
 
 function LessonScreen({ go, nav, sources, lessons, items, userData }) {
   const { sourceId, catId } = nav;
+  const { quizProgress = {}, progress = {} } = userData;
+
+  // sourceId가 있으면 레슨 목록, 없으면 교재 목록 표시
+  if (!sourceId) {
+    const catSources = sources.filter((s) => s.CategoryID === catId);
+    const cat = catSources[0];
+    return (
+      <div style={S.page}><div style={S.inner}>
+        <Header title={nav.catName || "교재 선택"} onBack={() => go("home")} />
+        {catSources.map((src) => (
+          <div key={src.SourceID} onClick={() => go("lesson", { sourceId: src.SourceID, catId })}
+            style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 15, color: C.text }}>{src.Name}</div>
+              <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
+            </div>
+            <span style={{ color: C.sub, fontSize: 20 }}>›</span>
+          </div>
+        ))}
+      </div></div>
+    );
+  }
+
   const source = sources.find((s) => s.SourceID === sourceId);
   const srcLessons = lessons.filter((l) => l.SourceID === sourceId).sort((a, b) => Number(a.Order) - Number(b.Order));
-  const { quizProgress = {}, progress = {} } = userData;
   return (
     <div style={S.page}><div style={S.inner}>
-      <Header title={source?.Name} onBack={() => go("home")} />
+      <Header title={source?.Name} onBack={() => go("lesson", { catId })} />
       {srcLessons.map((l) => {
         const key = `${l.LessonID}_${l.SourceID}`; const qp = quizProgress[key];
         const lessonItems = items.filter((it) => it.LessonID === l.LessonID);
@@ -817,7 +837,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
 
   if (done) return (
     <div style={S.page}><div style={{ ...S.inner, textAlign: "center", paddingTop: 60 }}>
-      <img src="./assets/duck2.png" alt="완료" style={{ width: 120, marginBottom: 20 }} />
+      <img src={duck2Img} alt="완료" style={{ width: 120, marginBottom: 20 }} />
       <div style={{ fontSize: 24, fontWeight: 900, color: C.text, marginBottom: 8 }}>Speaking Test 완료! 🎉</div>
       <div style={{ color: C.sub, marginBottom: 32 }}>수고했어요! 다이어리를 작성해볼까요?</div>
       <button onClick={() => go("stepDiary", { lessonId, sourceId })} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 12 }}>📔 Diary 쓰기</button>
@@ -1039,9 +1059,9 @@ export default function App() {
     return () => window.removeEventListener("popstate", handler);
   }, []);
 
-  if (authLoading) return <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}><img src="./assets/duck.png" alt="QUAK" style={{ width: 100, objectFit: "contain" }} /></div>;
+  if (authLoading) return <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}><img src={duckImg} alt="QUAK" style={{ width: 100, objectFit: "contain" }} /></div>;
   if (!user) return <LoginScreen />;
-  if (!dataLoaded) return <div style={{ ...S.page, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}><img src="./assets/duck.png" alt="QUAK" style={{ width: 100, objectFit: "contain" }} /><div style={{ color: C.sub }}>학습 데이터 불러오는 중...</div></div>;
+  if (!dataLoaded) return <div style={{ ...S.page, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}><img src={duckImg} alt="QUAK" style={{ width: 100, objectFit: "contain" }} /><div style={{ color: C.sub }}>학습 데이터 불러오는 중...</div></div>;
 
   const shared = { go, nav, userData, setUserData, categories, sources, lessons, items, user };
 

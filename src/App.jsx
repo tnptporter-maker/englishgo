@@ -706,7 +706,7 @@ function LessonStepsScreen({ go, nav, lessons, sources, userData, setUserData })
         {steps.map((step, i) => (
           <div key={step.id} onClick={() => go(step.screen, { lessonId, sourceId })}
             style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 14, border: step.done ? `1.5px solid ${C.doneBorder}` : `1.5px solid ${C.border}`, background: step.done ? C.doneBg : C.card }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}><StepIcon type={step.type} color={isDoneStep ? "#fff" : C.primaryDark} /></div>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{step.icon}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 15, color: step.done ? C.done : C.text, textAlign: "left" }}>{step.label}</div>
               <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{i + 1}단계</div>

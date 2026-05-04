@@ -529,13 +529,13 @@ function CourseSelectScreen({ go, categories, sources, lessons }) {
         <Header title="교재 선택" onBack={() => go("home")} />
         {catGroups.map(({ cat, srcs }) => (
           <div key={cat.CategoryID} style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8 }}>{cat.Name}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.error, marginBottom: 8 }}>{cat.Name}</div>
             {srcs.map((src) => (
               <div key={src.SourceID} onClick={() => go("lesson", { sourceId: src.SourceID, catId: cat.CategoryID })}
                 style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left" }}>{src.Name}</div>
-                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
+                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2, textAlign: "left" }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
                 </div>
                 <span style={{ color: C.sub, fontSize: 20 }}>›</span>
               </div>
@@ -1077,7 +1077,7 @@ function ScriptTab({ go, sources, lessons, categories }) {
                 style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left" }}>{src.Name}</div>
-                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
+                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2, textAlign: "left" }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
                 </div>
                 <span style={{ color: C.sub, fontSize: 20 }}>›</span>
               </div>

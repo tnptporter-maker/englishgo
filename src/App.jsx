@@ -455,13 +455,13 @@ function HomeScreen({ go, userData, categories, sources, lessons, items, user })
           </div>
         )}
 
-        {/* 교재 선택 */}
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8 }}>교재 선택</div>
+        {/* 학습 선택 */}
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8 }}> 학습 선택</div>
         {catGroups.map(({ cat, srcs }) => (
           <div key={cat.CategoryID} style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 8 }}>{cat.Name}</div>
             {srcs.map((src) => (
-              <div key={src.SourceID} onClick={() => go("lesson", { sourceId: src.SourceID, catId: cat.CategoryID })}
+              <div key={src.SourceID} onClick={() => go("Source", { sourceId: src.SourceID, catId: cat.CategoryID })}
                 style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 15, color: C.text }}>{src.Name}</div>

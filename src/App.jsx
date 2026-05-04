@@ -551,7 +551,7 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
                   if (isSelected) { setSelectedLesson(null); return; }
                   setSelectedLesson(l);
                   setTimeout(() => {
-                    lessonRefs.current[l.LessonID]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    lessonRefs.current[l.LessonID]?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }, 50);
                 }}
               >

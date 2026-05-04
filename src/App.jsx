@@ -560,7 +560,7 @@ function LessonScreen({ go, nav, sources, lessons, items, userData }) {
           <div key={l.LessonID} onClick={() => go("lessonSteps", { lessonId: l.LessonID, sourceId, catId })}
             style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, color: C.text, marginBottom: 4 }}>{l.Title}</div>
+              <div style={{ fontWeight: 600, fontSize: 14, color: C.text, marginBottom: 4, textAlign: "left" }}>{l.Title}</div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <span style={{ fontSize: 12, color: C.sub }}>{lessonItems.length}문장</span>
                 {studiedCount > 0 && <span style={{ fontSize: 12, color: C.primaryDark }}>({studiedCount}개 학습됨)</span>}

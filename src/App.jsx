@@ -528,7 +528,7 @@ function CourseSelectScreen({ go, categories, sources, lessons }) {
         <Header title="교재 선택" onBack={() => go("home")} />
         {catGroups.map(({ cat, srcs }) => (
           <div key={cat.CategoryID} style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 17, fontWeight: 700, color: C.accent, marginBottom: 8 }}>{cat.Name}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.primaryDark, marginBottom: 8 }}>{cat.Name}</div>
             {srcs.map((src) => (
               <div key={src.SourceID} onClick={() => go("lesson", { sourceId: src.SourceID, catId: cat.CategoryID })}
                 style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>

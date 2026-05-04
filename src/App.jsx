@@ -534,15 +534,12 @@ function LessonScreen({ go, nav, sources, lessons, items, userData }) {
     const catSources = sources.filter((s) => s.CategoryID === catId);
     return (
       <div style={S.page}><div style={S.inner}>
-        <Header title={nav.catName || "교재 선택"} onBack={() => go("home")} />
+        <Header title="교재 선택" onBack={() => go("home")} />
         {catSources.map((src) => (
           <div key={src.SourceID} onClick={() => go("lesson", { sourceId: src.SourceID, catId })}
-            style={{ ...S.card, cursor: "pointer", display: "flex-start", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 15, color: C.text }}>{src.Name}</div>
-              <div style={{ fontSize: 12, color: C.sub, marginTop: 2, textAlign: "left" }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
-            </div>
-            <span style={{ color: C.sub, fontSize: 20 }}>›</span>
+            style={{ ...S.card, cursor: "pointer" }}>
+            <div style={{ fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left" }}>{src.Name}</div>
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 2, textAlign: "left" }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
           </div>
         ))}
       </div></div>

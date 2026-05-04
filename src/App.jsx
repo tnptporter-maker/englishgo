@@ -216,7 +216,7 @@ function Header({ title, onBack, onQuit }) {
       {onQuit && !onBack && (
         <div style={{ width: 22 }} />
       )}
-      {title && <span style={{ fontWeight: 700, fontSize: 16, color: C.text, flex: 1, lineHeight: 1.3 }}>{title}</span>}
+      {title && <span style={{ fontWeight: 700, fontSize: 16, color: C.text, flex: 1, lineHeight: 1.3, textAlign: "left" }}>{title}</span>}
       {onQuit && (
         <button onClick={onQuit} style={{ ...S.btn, ...S.btnDanger, width: "auto", padding: "8px 14px", fontSize: 13, flexShrink: 0 }}>그만하기</button>
       )}

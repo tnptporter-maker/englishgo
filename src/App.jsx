@@ -709,7 +709,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   const { lessonId, sourceId, resume } = nav;
   const key = `${lessonId}_${sourceId}`;
   const { quizProgress = {} } = userData;
-  const rawItems = items.filter((it) => it.LessonID === lessonId);
+  const rawItems = items.filter((it) => it.LessonID === lessonId && it.SourceID === sourceId);
   const source = sources.find((s) => s.SourceID === sourceId);
   const cat = categories.find((c) => c.CategoryID === source?.CategoryID);
   const isOPIc = cat?.Name === "OPIc";
@@ -807,7 +807,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   const { lessonId, sourceId, resume } = nav;
   const key = `${lessonId}_${sourceId}`;
   const { quizProgress = {} } = userData;
-  const rawItems = items.filter((it) => it.LessonID === lessonId);
+  const rawItems = items.filter((it) => it.LessonID === lessonId && it.SourceID === sourceId);
   const source = sources.find((s) => s.SourceID === sourceId);
   const cat = categories.find((c) => c.CategoryID === source?.CategoryID);
   const isOPIc = cat?.Name === "OPIc";
@@ -894,7 +894,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   const key = `${lessonId}_${sourceId}`;
   const { quizProgress = {} } = userData;
   const [done, setDone] = useState(false);
-  const lessonItems = items.filter((it) => it.LessonID === lessonId);
+  const lessonItems = items.filter((it) => it.LessonID === lessonId && it.SourceID === sourceId);
   const [resumeModal, setResumeModal] = useState(false);
   const savedIdx = (() => {
     const saved = quizProgress[key];
@@ -1265,7 +1265,7 @@ function ScriptSourceScreen({ go, nav, sources, lessons, items }) {
       <div style={S.inner}>
         <Header title={source?.Name} onBack={() => go("script")} />
         {srcLessons.map((l) => {
-          const lessonItems = items.filter((it) => it.LessonID === l.LessonID);
+          const lessonItems = items.filter((it) => it.LessonID === l.LessonID && it.SourceID === sourceId);
           return (
             <div key={l.LessonID} onClick={() => go("scriptDetail", { lessonId: l.LessonID, sourceId })}
               style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1286,7 +1286,7 @@ function ScriptDetailScreen({ go, nav, lessons, sources, items, userData, setUse
   const { lessonId, sourceId } = nav;
   const lesson = lessons.find((l) => l.LessonID === lessonId);
   const source = sources.find((s) => s.SourceID === sourceId);
-  const lessonItems = items.filter((it) => it.LessonID === lessonId).sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0));
+  const lessonItems = items.filter((it) => it.LessonID === lessonId && it.SourceID === sourceId).sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0));
   const { favorites = {} } = userData;
   const toggleFav = (itemId) => {
     setUserData((prev) => { const f = { ...prev.favorites }; if (f[itemId]) delete f[itemId]; else f[itemId] = true; return { ...prev, favorites: f }; });

@@ -110,7 +110,7 @@ const fetchSheet = async (sheetName) => {
       else cur += ch;
     }
     vals.push(cur);
-    return Object.fromEntries(headers.map((h, i) => [h, (vals[i] || "").trim()]));
+    return Object.fromEntries(headers.map((h, i) => [h, (vals[i] || "").replace(/\\n/g, "\n").trim()]));
   });
 };
 
@@ -1181,7 +1181,7 @@ function DiaryTab({ userData, setUserData, go }) {
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>{d.sourceName}</div>
               <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 8 }}>{d.lessonTitle}</div>
-            <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{d.content}</div>
+            
             </div>
           </div>
         ))}

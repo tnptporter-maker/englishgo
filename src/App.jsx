@@ -1171,7 +1171,8 @@ function DiaryTab({ userData, setUserData, go }) {
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>{d.sourceName}</div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{d.lessonTitle}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 8 }}>{d.lessonTitle}</div>
+            <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.6, whiteSpace: "pre-wrap", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>{d.content}</div>
             </div>
           </div>
         ))}

@@ -114,18 +114,16 @@ const fetchSheet = async (sheetName) => {
   });
 };
 
-const fetchBlanks = async (sentence) => {
-  try {
-    const res = await fetch("/api/split", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sentence }),
-    });
-    const data = await res.json();
-    console.log("blanks:", JSON.stringify(data));
-    if (Array.isArray(data.blanks) && data.blanks.length > 0) return data.blanks;
-  } catch {}
-  return [];
+const fetchBlanks = (sentence) => {
+  const words = sentence.split(" ");
+  const total = words.length;
+  if (total <= 3) return [sentence];
+  const size = Math.ceil(total / 3);
+  const chunks = [];
+  for (let i = 0; i < total; i += size) {
+    chunks.push(words.slice(i, i + size).join(" "));
+  }
+  return chunks;
 };
 
 

@@ -807,7 +807,6 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
     return (saved && saved.startsWith("build_")) ? Number(saved.split("_")[1]) || 0 : 0;
   })();
   const [idx, setIdx] = useState(resume ? savedIdx : 0);
-  const [options, setOptions] = useState([]);
   const [selected, setSelected] = useState([]);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -817,36 +816,48 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   const handleResumeContinue = () => setResumeModal(false);
   const handleResumeFresh = () => { setIdx(0); setResumeModal(false); };
 
-  const [blanks, setBlanks] = useState([]);
-  const [userInputs, setUserInputs] = useState({});
-
-  const loadBlanks = async (item) => {
-    setLoading(true); setResult(null); setUserInputs({});
-    const b = await fetchBlanks(item.English);
-    setBlanks(b); setLoading(false);
+  const getChunks = (sentence) => {
+    const CONJUNCTIONS = /^(and|but|or|so|because|until|when|while|if|before|after|though|although|unless|that|which|who)$/i;
+    const PREPOSITIONS = /^(for|in|on|at|to|of|with|by|from|about|as|into|through|during)$/i;
+    const words = sentence.split(" ");
+    if (words.length <= 3) return [sentence];
+    let chunks = [];
+    let current = [];
+    for (let i = 0; i < words.length; i++) {
+      if (i > 0 && current.length >= 2 && (CONJUNCTIONS.test(words[i]) || PREPOSITIONS.test(words[i]))) {
+        chunks.push(current.join(" "));
+        current = [words[i]];
+      } else {
+        current.push(words[i]);
+      }
+    }
+    if (current.length > 0) chunks.push(current.join(" "));
+    // 너무 긴 청크 추가 분리
+    const result2 = [];
+    for (const chunk of chunks) {
+      const w = chunk.split(" ");
+      if (w.length > 8) {
+        const mid = Math.ceil(w.length / 2);
+        result2.push(w.slice(0, mid).join(" "));
+        result2.push(w.slice(mid).join(" "));
+      } else { result2.push(chunk); }
+    }
+    return result2.length > 1 ? result2 : [sentence];
   };
-  useEffect(() => { if (curItem) loadBlanks(curItem); }, [idx]);
+
+  const [options] = useState(() => shuffle(getChunks(shuffledItems[0]?.English || "").map((c, i) => ({ id: i, text: c }))));
+  const [chunkOptions, setChunkOptions] = useState(() => shuffle(getChunks(curItem?.English || "").map((c, i) => ({ id: i, text: c }))));
+
+  useEffect(() => {
+    if (curItem) { setSelected([]); setResult(null); setChunkOptions(shuffle(getChunks(curItem.English).map((c, i) => ({ id: i, text: c })))); }
+  }, [idx]);
   useEffect(() => {
     setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: `build_${idx}` } }));
   }, [idx]);
 
-  const getDisplaySentence = () => {
-    let display = curItem.English;
-    blanks.forEach((blank, i) => {
-      display = display.replace(blank, `__BLANK${i}__`);
-    });
-    return display;
-  };
-
-  const handleSubmit = () => {
-    const allFilled = blanks.every((_, i) => (userInputs[i] || "").trim());
-    if (!allFilled) return;
-    let reconstructed = curItem.English;
-    blanks.forEach((blank, i) => {
-      reconstructed = reconstructed.replace(blank, (userInputs[i] || "").trim());
-    });
-    setResult(checkCorrect(curItem.English, reconstructed));
-  };
+  const handleSelect = (opt) => { if (result !== null) return; if (selected.find(s => s.id === opt.id)) return; setSelected((prev) => [...prev, opt]); };
+  const handleDeselect = (opt, si) => { if (result !== null) return; setSelected((prev) => prev.filter((_, i) => i !== si)); };
+  const handleSubmit = () => { setResult(checkCorrect(curItem.English, selected.map((s) => s.text).join(" "))); };
   const handleNext = () => {
     if (idx + 1 < shuffledItems.length) {
       setIdx(idx + 1);
@@ -862,30 +873,6 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
 
   if (!curItem) return null;
 
-  // 빈칸 포함 문장 렌더링
-  const renderSentence = () => {
-    if (loading) return <span style={{ color: C.sub, fontSize: 13 }}>분석 중...</span>;
-    if (blanks.length === 0) return <span style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{curItem.English}</span>;
-    let parts = [curItem.English];
-    blanks.forEach((blank, i) => {
-      parts = parts.flatMap(part => {
-        if (typeof part !== "string") return [part];
-        const idx2 = part.indexOf(blank);
-        if (idx2 === -1) return [part];
-        return [
-          part.slice(0, idx2),
-          <input key={i} value={userInputs[i] || ""} onChange={e => setUserInputs(prev => ({ ...prev, [i]: e.target.value }))}
-            placeholder={blank.replace(/\S/g, "_")}
-            style={{ border: "none", borderBottom: `2px solid ${result === true ? C.accent : result === false ? C.error : C.primary}`, outline: "none", fontSize: 16, fontWeight: 700, color: C.primaryDark, background: "transparent", width: Math.max(blank.length * 10, 60) + "px", textAlign: "center", padding: "2px 4px", margin: "0 2px" }} />,
-          part.slice(idx2 + blank.length),
-        ];
-      });
-    });
-    return <div style={{ fontSize: 16, lineHeight: 2, color: C.text, fontWeight: 500 }}>{parts}</div>;
-  };
-
-  const allFilled = blanks.length > 0 && blanks.every((_, i) => (userInputs[i] || "").trim());
-
   return (
     <div style={S.page}>
       <div style={S.inner}>
@@ -895,15 +882,25 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
           <div style={{ fontSize: 13, color: C.sub, marginBottom: 8 }}>한국어</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{curItem.Korean}</div>
         </div>
-        <div style={{ ...S.card, marginBottom: 16, border: `1.5px solid ${result === true ? C.accent : result === false ? C.error : C.border}`, background: "#fff" }}>
-          <div style={{ fontSize: 13, color: C.sub, marginBottom: 12 }}>빈칸을 채워보세요</div>
-          {renderSentence()}
+        <div style={{ minHeight: 56, border: `2px dashed ${result === true ? C.accent : result === false ? C.error : C.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14, background: "#fff" }}>
+          {selected.length === 0
+            ? <span style={{ color: C.sub, fontSize: 13 }}>청크를 순서대로 선택하세요</span>
+            : <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{selected.map(s => s.text).join(" ")}</span>}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+          {chunkOptions.map((opt) => {
+            const isSelected = selected.find(s => s.id === opt.id);
+            return (
+              <button key={opt.id} onClick={() => isSelected ? handleDeselect(opt, selected.findIndex(s => s.id === opt.id)) : handleSelect(opt)}
+                style={{ background: isSelected ? "#D1D5DB" : C.primaryLight, color: isSelected ? C.text : C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
+            );
+          })}
         </div>
         {result !== null && <ResultCard correct={result} english={curItem.English} />}
         {result === null
           ? <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-              <button onClick={() => setUserInputs({})} style={{ ...S.btn, flex: 1, background: "#fff", color: C.sub, border: `1.5px solid ${C.border}` }}>초기화</button>
-              <button onClick={handleSubmit} disabled={!allFilled} style={{ ...S.btn, ...S.btnPrimary, flex: 1, opacity: allFilled ? 1 : 0.5 }}>제출</button>
+              <button onClick={() => setSelected([])} style={{ ...S.btn, flex: 1, background: "#fff", color: C.sub, border: `1.5px solid ${C.border}` }}>초기화</button>
+              <button onClick={handleSubmit} disabled={selected.length === 0} style={{ ...S.btn, ...S.btnPrimary, flex: 1, opacity: selected.length === 0 ? 0.5 : 1 }}>제출</button>
             </div>
           : <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary, marginTop: 12 }}>{idx + 1 < shuffledItems.length ? "다음" : "Speaking Test"}</button>}
       </div>

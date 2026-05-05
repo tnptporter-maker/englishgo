@@ -114,46 +114,43 @@ const fetchSheet = async (sheetName) => {
   });
 };
 
-const splitIntoChunks = async (sentence) => {
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514", max_tokens: 300,
-        messages: [{ role: "user", content: `Split this English text into exactly 3-4 meaningful phrase chunks for language learning. Each chunk should be 2-5 words. CRITICAL RULES: 1) Never split across sentence boundaries. 2) Punctuation (.?!,) must always stay at the END of a chunk, never at the START. 3) Return ONLY a JSON array of strings, no explanation.\nText: "${sentence}"` }]
-      })
-    });
-    const data = await res.json();
-    const text = data.content?.[0]?.text || "";
-    const match = text.match(/\[.*\]/s);
-    if (match) {
-      const chunks = JSON.parse(match[0]);
-      if (Array.isArray(chunks) && chunks.length > 1) {
-        // 1) 구두점 기준 분리
-        const fixed = [];
-        for (const chunk of chunks) {
-          const parts = chunk.split(/(?<=[.?!,])\s+/);
-          for (const part of parts) { if (part.trim()) fixed.push(part.trim()); }
-        }
-        const base = fixed.length > 1 ? fixed : chunks;
-        // 2) 1단어짜리 청크는 앞 청크에 합치기
-        const merged = [];
-        for (const chunk of base) {
-          if (merged.length > 0 && chunk.split(" ").length === 1 && !/[.?!,]$/.test(merged[merged.length - 1])) {
-            merged[merged.length - 1] += " " + chunk;
-          } else {
-            merged.push(chunk);
-          }
-        }
-        return merged;
-      }
+const splitIntoChunks = (sentence) => {
+  const CONJUNCTIONS = /\b(and|but|or|so|because|until|when|while|if|that|which|who|before|after|as|though|although|unless)\b/i;
+  const sentenceParts = [];
+  const matches = sentence.match(/[^.?!]+[.?!]*/g);
+  if (matches) matches.forEach(m => { if (m.trim()) sentenceParts.push(m.trim()); });
+  else sentenceParts.push(sentence);
+  let chunks = [];
+  for (const part of sentenceParts) {
+    const commaParts = part.split(/,\s*/);
+    if (commaParts.length > 1) {
+      commaParts.forEach((p, i) => { if (p.trim()) chunks.push(i < commaParts.length - 1 ? p.trim() + "," : p.trim()); });
+    } else { chunks.push(part); }
+  }
+  if (chunks.length <= 2) {
+    const newChunks = [];
+    for (const chunk of chunks) {
+      const words = chunk.split(" ");
+      let splitIdx = -1;
+      for (let i = 1; i < words.length - 1; i++) { if (CONJUNCTIONS.test(words[i])) { splitIdx = i; break; } }
+      if (splitIdx > 0 && words.length > 4) { newChunks.push(words.slice(0, splitIdx).join(" ")); newChunks.push(words.slice(splitIdx).join(" ")); }
+      else { newChunks.push(chunk); }
     }
-  } catch {}
-  return sentence.split(" ").reduce((acc, w, i) => {
+    chunks = newChunks;
+  }
+  while (chunks.length > 5) {
+    let minLen = Infinity, minIdx = 0;
+    for (let i = 0; i < chunks.length - 1; i++) {
+      const len = chunks[i].split(" ").length + chunks[i+1].split(" ").length;
+      if (len < minLen) { minLen = len; minIdx = i; }
+    }
+    chunks.splice(minIdx, 2, chunks[minIdx] + " " + chunks[minIdx + 1]);
+  }
+  return chunks.length > 1 ? chunks : sentence.split(" ").reduce((acc, w, i) => {
     const g = Math.floor(i / 2); acc[g] = acc[g] ? acc[g] + " " + w : w; return acc;
   }, []);
 };
+
 
 const DEFAULT_DATA = { progress: {}, studyDays: [], quizProgress: {}, favorites: {}, diaries: [], stepDone: {} };
 const loadUserData = async (uid) => {

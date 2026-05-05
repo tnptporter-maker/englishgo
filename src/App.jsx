@@ -355,7 +355,7 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
         <button onClick={() => speak(curItem.English)} style={{ background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, color: C.primaryDark, fontWeight: 600 }}>🔊 듣기</button>
       </div>
       <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, background: listening ? "#2DC7A0" : "#4DD9B8", color: "#fff", marginBottom: 12, fontSize: 16, padding: "16px" }}>
-        {listening ? "⏹ 녹음 중지" : "🎤 영어로 말하기"}
+        {listening ? "◻ 녹음 중지" : "🎤 영어로 말하기"}
       </button>
       <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="또는 직접 영어로 입력하세요"
         style={{ ...S.input, minHeight: 72, marginBottom: 12, display: "block" }} />

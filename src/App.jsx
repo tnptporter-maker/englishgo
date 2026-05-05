@@ -121,7 +121,7 @@ const splitIntoChunks = async (sentence) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514", max_tokens: 300,
-        messages: [{ role: "user", content: `Split this English sentence into 3-6 meaningful chunks for a language learning app. Return ONLY a JSON array of strings, no explanation.\nSentence: "${sentence}"` }]
+        messages: [{ role: "user", content: `Split this single English sentence into 3-6 meaningful phrase chunks for language learning. Each chunk must be part of ONLY this one sentence. Return ONLY a JSON array of strings, no explanation, no extra sentences.\nSentence: "${sentence}"` }]
       })
     });
     const data = await res.json();
@@ -838,8 +838,8 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
     setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: `build_${idx}` } }));
   }, [idx]);
 
-  const handleSelect = (opt) => { if (result !== null) return; setSelected((prev) => [...prev, opt]); setOptions((prev) => prev.filter((o) => o.id !== opt.id)); };
-  const handleDeselect = (opt, si) => { if (result !== null) return; setSelected((prev) => prev.filter((_, i) => i !== si)); setOptions((prev) => [...prev, opt]); };
+  const handleSelect = (opt) => { if (result !== null) return; if (selected.find(s => s.id === opt.id)) return; setSelected((prev) => [...prev, opt]); };
+  const handleDeselect = (opt, si) => { if (result !== null) return; setSelected((prev) => prev.filter((_, i) => i !== si)); };
   const handleSubmit = () => { setResult(checkCorrect(curItem.English, selected.map((s) => s.text).join(" "))); };
   const handleNext = () => {
     if (idx + 1 < shuffledItems.length) {
@@ -866,17 +866,19 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
         </div>
         <div style={{ minHeight: 56, border: `2px dashed ${result === true ? C.accent : result === false ? C.error : C.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", background: result === true ? C.accentLight : result === false ? C.errorBg : "#fff" }}>
           {selected.length === 0
-            ? <span style={{ color: C.sub, fontSize: 13 }}>단어를 선택하세요</span>
-            : selected.map((s, i) => (
-              <button key={i} onClick={() => handleDeselect(s, i)} style={{ background: result === true ? C.accent : result === false ? C.error : C.primary, color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{s.text}</button>
-            ))}
+            ? <span style={{ color: C.sub, fontSize: 13 }}>단어를 눌러 순서대로 선택하세요</span>
+            : <span style={{ color: C.sub, fontSize: 13 }}>{selected.map(s => s.text).join(" ")}</span>}
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
           {loading
             ? <span style={{ color: C.sub, fontSize: 13 }}>문장 분석 중...</span>
-            : options.map((opt) => (
-              <button key={opt.id} onClick={() => handleSelect(opt)} style={{ background: C.primaryLight, color: C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
-            ))}
+            : options.map((opt) => {
+              const isSelected = selected.find(s => s.id === opt.id);
+              return (
+                <button key={opt.id} onClick={() => isSelected ? handleDeselect(opt, selected.findIndex(s => s.id === opt.id)) : handleSelect(opt)}
+                  style={{ background: isSelected ? C.primary : C.primaryLight, color: isSelected ? "#fff" : C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
+              );
+            })}
         </div>
         {result !== null && <ResultCard correct={result} english={curItem.English} />}
         {result === null

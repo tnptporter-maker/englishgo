@@ -1068,7 +1068,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
         {lesson?.DiaryPrompt && (
           <div style={{ ...S.card, background: C.primaryLight, marginBottom: 16 }}>
             <div style={{ fontSize: 13, color: C.primaryDark, fontWeight: 600 }}>💡 오늘의 주제</div>
-            <div style={{ fontSize: 14, color: C.text, marginTop: 6 }}>{lesson.DiaryPrompt}</div>
+            <div style={{ fontSize: 14, color: C.text, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.8 }}>{lesson.DiaryPrompt}</div>
           </div>
         )}
         <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="오늘 배운 표현을 사용해서 영어로 일기를 써보세요..."

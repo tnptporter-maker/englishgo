@@ -443,8 +443,9 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
   // 앱 열면 todayLesson 자동 선택, 방금 학습한 레슨 있으면 그걸로
   useEffect(() => {
     if (!selectedLesson) {
-      const target = nav.lastLessonId
-        ? sortedLessons.find(l => l.LessonID === nav.lastLessonId) || todayLesson
+      const lastId = nav.lastLessonId || localStorage.getItem("lastLessonId");
+      const target = lastId
+        ? sortedLessons.find(l => l.LessonID === lastId) || todayLesson
         : todayLesson;
       if (target) setSelectedLesson(target);
     }
@@ -769,7 +770,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="따라읽기" onQuit={() => { stopMic(); stopSpeak(); go("home", { lastLessonId: lessonId }); }} />
+        <Header title="따라읽기" onQuit={() => { stopMic(); stopSpeak(); localStorage.setItem("lastLessonId", lessonId); go("home", { lastLessonId: lessonId }); }} />
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
@@ -907,7 +908,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="문장 만들기" onQuit={() => go("home", { lastLessonId: lessonId })} />
+        <Header title="문장 만들기" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); go("home", { lastLessonId: lessonId }); }} />
         <ProgressBar current={idx} total={shuffledItems.length} />
         <div style={{ ...S.card, marginBottom: 16 }}>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{curItem.Korean}</div>
@@ -989,7 +990,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="Speaking Test" onQuit={() => go("home", { lastLessonId: lessonId })} />
+        <Header title="Speaking Test" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); go("home", { lastLessonId: lessonId }); }} />
         <QuizCoreWithIdx rawItems={lessonItems} initIdx={startIdx}
           onResult={handleResult}
           onIdxChange={(i) => setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: String(i) } }))}

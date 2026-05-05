@@ -1402,7 +1402,7 @@ export default function App() {
     if (tabScreens.includes(s)) {
       setTab(s);
       setScreen(null);
-      setNav({});
+      setNav(n);
     } else {
       setScreen(s);
       setNav(n);

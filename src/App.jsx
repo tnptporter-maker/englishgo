@@ -834,12 +834,10 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
     const CONJUNCTIONS = /^(and|but|or|so|because|until|when|while|if|before|after|though|although|unless|that|which|who)$/i;
     const PREPOSITIONS = /^(for|in|on|at|to|of|with|by|from|about|as|into|through|during)$/i;
     const words = sentence.split(" ");
-    if (words.length <= 3) {
-      // 구두점 기준으로 분리 시도
-      const punctChunks = sentence.split(/(?<=[.?!,])\s+/);
-      if (punctChunks.length > 1) return punctChunks;
-      return [sentence];
-    }
+    // 항상 구두점 기준으로 먼저 분리 시도
+    const punctChunks = sentence.split(/(?<=[.?!])\s+/);
+    if (punctChunks.length > 1) return punctChunks;
+    if (words.length <= 3) return [sentence];
     let chunks = [];
     let current = [];
     for (let i = 0; i < words.length; i++) {

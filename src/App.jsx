@@ -617,24 +617,7 @@ function HomeScreen({ go, user, userData, setUserData, categories, sources, less
                         const isDoneStep = step.id === "stepQuiz" ? qp === "done" : sd[stepKey];
                         return (
                           <div key={step.id}
-                            onClick={() => {
-                            const stepKey = step.id.replace("step", "").toLowerCase();
-                            const stepQp = quizProgress[`${l.LessonID}_${l.SourceID}`];
-                            const stepSd = userData.stepDone?.[`${l.LessonID}_${l.SourceID}`] || {};
-                            // 해당 스텝이 진행중인지 확인
-                            if (step.id === "stepRead" && stepQp && stepQp.startsWith("preview_")) {
-                              setResumeTarget({ lessonId: l.LessonID, sourceId: l.SourceID, screen: "stepRead", key: `${l.LessonID}_${l.SourceID}` });
-                              setResumeModal(true);
-                            } else if (step.id === "stepBuild" && stepQp && stepQp.startsWith("build_")) {
-                              setResumeTarget({ lessonId: l.LessonID, sourceId: l.SourceID, screen: "stepBuild", key: `${l.LessonID}_${l.SourceID}` });
-                              setResumeModal(true);
-                            } else if (step.id === "stepQuiz" && stepQp && !isNaN(Number(stepQp)) && !stepQp.startsWith("preview") && !stepQp.startsWith("build")) {
-                              setResumeTarget({ lessonId: l.LessonID, sourceId: l.SourceID, screen: "stepQuiz", key: `${l.LessonID}_${l.SourceID}` });
-                              setResumeModal(true);
-                            } else {
-                              go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID });
-                            }
-                          }}
+                            onClick={() => go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID, resume: true })}
                             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", width: 56 }}>
                             <div style={{
                               position: "relative",
@@ -790,7 +773,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         </div>
         <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
           <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#fff", color: C.text, fontWeight: 700, fontSize: 14, border: `1.5px solid ${C.border}` }}>🔊 듣기</button>
-          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#7BAF3A" : "#A8C96B", color: "#fff", fontWeight: 700, fontSize: 14 }}>
+          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#8DB86A" : "#C5DFA0", color: "#4A5E2A", fontWeight: 700, fontSize: 14 }}>
             {listening ? "⏹ 중지" : "🎤 따라읽기"}
           </button>
         </div>

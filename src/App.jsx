@@ -765,7 +765,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
-            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round >= r ? "#FDE68A" : "#fff", color: round >= r ? C.primaryDark : C.sub, border: `1.5px solid ${C.border}` }}>
+            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round >= r ? "#FEF3C7" : "#fff", color: round >= r ? C.primaryDark : C.sub, border: "none", boxShadow: "0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04)" }}>
               {r}회차
             </div>
           ))}
@@ -776,7 +776,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
           <div style={{ fontSize: 20, fontWeight: 700, color: C.primaryDark, lineHeight: 1.5 }}>{curItem.English}</div>
         </div>
         <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-          <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#fff", color: C.text, fontWeight: 700, fontSize: 14, border: "none" }}>🔊 듣기</button>
+          <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#fff", color: C.text, fontWeight: 700, fontSize: 14, border: "none", boxShadow: "0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04)" }}>🔊 듣기</button>
           <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#2DC7A0" : "#4DD9B8", color: "#fff", fontWeight: 700, fontSize: 14 }}>
             {listening ? "⏹ 중지" : "🎤 따라읽기"}
           </button>

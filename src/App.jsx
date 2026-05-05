@@ -100,18 +100,35 @@ const fetchSheet = async (sheetName) => {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
   const res = await fetch(url);
   const text = await res.text();
-  const lines = text.trim().split("\n");
-  const headers = lines[0].split(",").map((h) => h.replace(/^"|"$/g, "").trim());
-  return lines.slice(1).map((line) => {
-    const vals = []; let cur = "", inQ = false;
-    for (const ch of line) {
-      if (ch === '"') inQ = !inQ;
-      else if (ch === "," && !inQ) { vals.push(cur); cur = ""; }
-      else cur += ch;
+  
+  // 큰따옴표 안의 줄바꿈을 처리하는 CSV 파서
+  const parseCSV = (str) => {
+    const rows = [];
+    let row = [], cur = "", inQ = false;
+    for (let i = 0; i < str.length; i++) {
+      const ch = str[i];
+      if (ch === '"') {
+        if (inQ && str[i+1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) {
+        row.push(cur); cur = "";
+      } else if ((ch === '\n' || (ch === '\r' && str[i+1] === '\n')) && !inQ) {
+        if (ch === '\r') i++;
+        row.push(cur); rows.push(row);
+        row = []; cur = "";
+      } else {
+        cur += ch;
+      }
     }
-    vals.push(cur);
-    return Object.fromEntries(headers.map((h, i) => [h, (vals[i] || "").replace(/\\n/g, "\n").trim()]));
-  });
+    if (cur || row.length) { row.push(cur); rows.push(row); }
+    return rows;
+  };
+
+  const rows = parseCSV(text);
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(vals =>
+    Object.fromEntries(headers.map((h, i) => [h, (vals[i] || "").trim()]))
+  );
 };
 
 const fetchBlanks = (sentence) => {

@@ -351,7 +351,6 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
     <div>
       <ProgressBar current={idx} total={shuffledItems.length} />
       <div style={{ ...S.card, marginBottom: 16 }}>
-        <div style={{ fontSize: 13, color: C.sub, marginBottom: 8 }}>한국어</div>
         <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.6, marginBottom: 14 }}>{curItem.Korean}</div>
         <button onClick={() => speak(curItem.English)} style={{ background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, color: C.primaryDark, fontWeight: 600 }}>🔊 듣기</button>
       </div>
@@ -762,21 +761,19 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
-            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round === r ? C.primary : "#fff", color: round === r ? "#fff" : C.sub, border: `1.5px solid ${round === r ? C.primary : C.border}` }}>
+            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round >= r ? C.primary : "#fff", color: round >= r ? "#fff" : C.sub, border: `1.5px solid ${round >= r ? C.primary : C.border}` }}>
               {r}회차
             </div>
           ))}
         </div>
         <div style={{ ...S.card, textAlign: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 13, color: C.sub, marginBottom: 12 }}>한국어</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 20, lineHeight: 1.6 }}>{curItem.Korean}</div>
           <div style={{ width: "100%", height: 1, background: C.borderLight, marginBottom: 20 }} />
-          <div style={{ fontSize: 13, color: C.sub, marginBottom: 8 }}>영어</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.primaryDark, lineHeight: 1.5 }}>{curItem.English}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.primaryDark, lineHeight: 1.5 }}>{curItem.English}</div>
         </div>
         <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-          <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#fff", color: C.text, fontWeight: 700, fontSize: 14 }}>🔊 듣기</button>
-          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#A8D84E" : "#CCFF66", color: "#4A5E2A", fontWeight: 700, fontSize: 14 }}>
+          <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#fff", color: C.text, fontWeight: 700, fontSize: 14, border: `1.5px solid ${C.border}` }}>🔊 듣기</button>
+          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#7BAF3A" : "#A8C96B", color: "#fff", fontWeight: 700, fontSize: 14 }}>
             {listening ? "⏹ 중지" : "🎤 따라읽기"}
           </button>
         </div>
@@ -820,7 +817,12 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
     const CONJUNCTIONS = /^(and|but|or|so|because|until|when|while|if|before|after|though|although|unless|that|which|who)$/i;
     const PREPOSITIONS = /^(for|in|on|at|to|of|with|by|from|about|as|into|through|during)$/i;
     const words = sentence.split(" ");
-    if (words.length <= 3) return [sentence];
+    if (words.length <= 3) {
+      // 구두점 기준으로 분리 시도
+      const punctChunks = sentence.split(/(?<=[.?!,])\s+/);
+      if (punctChunks.length > 1) return punctChunks;
+      return [sentence];
+    }
     let chunks = [];
     let current = [];
     for (let i = 0; i < words.length; i++) {
@@ -879,7 +881,6 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
         <Header title="문장 만들기" onQuit={() => go("home")} />
         <ProgressBar current={idx} total={shuffledItems.length} />
         <div style={{ ...S.card, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, color: C.sub, marginBottom: 8 }}>한국어</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{curItem.Korean}</div>
         </div>
         <div style={{ minHeight: 56, border: `2px dashed ${result === true ? C.accent : result === false ? C.error : C.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14, background: "#fff" }}>

@@ -398,7 +398,7 @@ function LoginScreen() {
   );
 }
 
-function HomeScreen({ go, user, userData, setUserData, categories, sources, lessons, items, selectedSourceId, setSelectedSourceId }) {
+function HomeScreen({ go, nav, user, userData, setUserData, categories, sources, lessons, items, selectedSourceId, setSelectedSourceId }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [resumeModal, setResumeModal] = useState(false);

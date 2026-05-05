@@ -143,7 +143,6 @@ const loadUserData = async (uid) => {
   return snap.exists() ? { ...DEFAULT_DATA, ...snap.data() } : { ...DEFAULT_DATA };
 };
 
-// ─── useMic ──────────────────────────────────────────────────────────────────
 function useMic(onResult) {
   const [listening, setListening] = useState(false);
   const recRef = useRef(null);
@@ -221,14 +220,16 @@ function useMic(onResult) {
   return { listening, startMic, stopMic };
 }
 
-// ─── 공통 컴포넌트 ─────────────────────────────────────────────────────────────
-function Header({ title, onBack, onQuit }) {
+function Header({ title, onBack, onQuit, onHome }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, minHeight: 44 }}>
       {onBack && (
         <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: C.text, padding: "4px 0", lineHeight: 1, flexShrink: 0 }}>←</button>
       )}
-      {onQuit && !onBack && <div style={{ width: 22 }} />}
+      {onHome && (
+        <button onClick={onHome} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: C.text, padding: "4px 0", lineHeight: 1, flexShrink: 0 }}>🏠</button>
+      )}
+      {onQuit && !onBack && !onHome && <div style={{ width: 22 }} />}
       {title && <span style={{ fontWeight: 700, fontSize: 16, color: C.text, flex: 1, lineHeight: 1.3, textAlign: "left" }}>{title}</span>}
       {onQuit && (
         <button onClick={onQuit} style={{ ...S.btn, ...S.btnDanger, width: "auto", padding: "8px 14px", fontSize: 13, flexShrink: 0 }}>그만하기</button>
@@ -318,6 +319,16 @@ function TabBar({ tab, setTab }) {
   );
 }
 
+function StepIcon({ type, color }) {
+  const s = { width: 28, height: 28 };
+  if (type === "video") return (<svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}><polygon points="5,3 19,12 5,21" fill={color} stroke="none" /></svg>);
+  if (type === "read") return (<svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /><circle cx="9" cy="11" r="1" fill={color} /><circle cx="12" cy="11" r="1" fill={color} /><circle cx="15" cy="11" r="1" fill={color} /></svg>);
+  if (type === "build") return (<svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}><rect x="2" y="2" width="9" height="9" rx="1" /><rect x="13" y="2" width="9" height="9" rx="1" /><rect x="2" y="13" width="9" height="9" rx="1" /><rect x="13" y="13" width="9" height="9" rx="1" /></svg>);
+  if (type === "quiz") return (<svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>);
+  if (type === "diary") return (<svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>);
+  return null;
+}
+
 function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone }) {
   const [shuffledItems] = useState(() => shuffle(rawItems));
   const [idx, setIdx] = useState(initIdx);
@@ -377,9 +388,6 @@ function QuizCore({ rawItems, onResult, onDone }) {
   return <QuizCoreWithIdx rawItems={rawItems} onResult={onResult} onDone={onDone} />;
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// 로그인
-// ════════════════════════════════════════════════════════════════════════════════
 function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const handleGoogle = async () => {
@@ -401,29 +409,15 @@ function LoginScreen() {
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// 홈
-// ════════════════════════════════════════════════════════════════════════════════
-
-function StepIcon({ type, color }) {
-  const s = { width: 28, height: 28 };
-  if (type === "video") return (<svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}><polygon points="5,3 19,12 5,21" fill={color} stroke="none" /></svg>);
-  if (type === "read") return (<svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /><circle cx="9" cy="11" r="1" fill={color} /><circle cx="12" cy="11" r="1" fill={color} /><circle cx="15" cy="11" r="1" fill={color} /></svg>);
-  if (type === "build") return (<svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}><rect x="2" y="2" width="9" height="9" rx="1" /><rect x="13" y="2" width="9" height="9" rx="1" /><rect x="2" y="13" width="9" height="9" rx="1" /><rect x="13" y="13" width="9" height="9" rx="1" /></svg>);
-  if (type === "quiz") return (<svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>);
-  if (type === "diary") return (<svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={s}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>);
-  return null;
-}
-
-function HomeScreen({ go, user, userData, categories, sources, lessons, items, selectedSourceId, setSelectedSourceId }) {
+function HomeScreen({ go, user, userData, setUserData, categories, sources, lessons, items, selectedSourceId, setSelectedSourceId }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null);
+  const [resumeModal, setResumeModal] = useState(false);
+  const [resumeTarget, setResumeTarget] = useState(null);
   const lessonRefs = useRef({});
-  const autoScrolled = useRef(false);
 
   const { studyDays = [], quizProgress = {} } = userData;
 
-  // 선택된 교재의 레슨만 표시 (미선택시 첫 번째 교재 자동 선택)
   const activeSourceId = selectedSourceId || (sources.length > 0 ? [...sources].sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0))[0]?.SourceID : null);
 
   const sortedLessons = (() => {
@@ -434,8 +428,8 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
   })();
 
   const selectedSource = sources.find(s => s.SourceID === activeSourceId) || null;
+  const selectedCat = selectedSource ? categories.find(c => c.CategoryID === selectedSource.CategoryID) : null;
 
-  // 자동 스크롤 기준 레슨 (진행중 → 다음 레슨 → 첫 레슨)
   const todayLesson = (() => {
     if (!sortedLessons.length) return null;
     const inProgress = sortedLessons.find((l) => {
@@ -457,16 +451,22 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
     return sortedLessons[0];
   })();
 
+  // 앱 열면 todayLesson 자동 선택 (펼침) - 자동 스크롤은 하지 않음(1번)
   useEffect(() => {
-    if (autoScrolled.current || !todayLesson) return;
-    const timer = setTimeout(() => {
-      lessonRefs.current[todayLesson.LessonID]?.scrollIntoView({ behavior: "smooth", block: "start" });
-      autoScrolled.current = true;
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [sortedLessons]);
+    if (todayLesson && !selectedLesson) {
+      setSelectedLesson(todayLesson);
+    }
+  }, [todayLesson]);
 
-  // 연속 학습일
+  // 레슨 선택 시 해당 레슨으로 스크롤 (13번)
+  useEffect(() => {
+    if (selectedLesson) {
+      setTimeout(() => {
+        lessonRefs.current[selectedLesson.LessonID]?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [selectedLesson]);
+
   const streakDays = (() => {
     if (!studyDays.length) return 0;
     const sorted = [...studyDays].sort((a, b) => b.localeCompare(a));
@@ -487,137 +487,193 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
     catch (e) { alert("탈퇴 실패. 재로그인 후 시도해주세요."); }
   };
 
-  
+  // 12번: 영상 없으면 영상보기 제외
+  const getStepList = (lesson) => {
+    const hasVideo = !!lesson?.VideoURL;
+    const steps = [];
+    let num = 1;
+    if (hasVideo) { steps.push({ id: "stepVideo", type: "video", label: "영상 보기", num: num++ }); }
+    steps.push({ id: "stepRead", type: "read", label: "따라읽기", num: num++ });
+    steps.push({ id: "stepBuild", type: "build", label: "문장 만들기", num: num++ });
+    steps.push({ id: "stepQuiz", type: "quiz", label: "Speaking", num: num++ });
+    steps.push({ id: "stepDiary", type: "diary", label: "Diary", num: num++ });
+    return steps;
+  };
 
-  const stepList = [
-    { id: "stepVideo", type: "video", label: "영상 보기",   num: 1 },
-    { id: "stepRead",  type: "read",  label: "따라읽기",    num: 2 },
-    { id: "stepBuild", type: "build", label: "문장 만들기", num: 3 },
-    { id: "stepQuiz",  type: "quiz",  label: "Speaking",   num: 4 },
-    { id: "stepDiary", type: "diary", label: "Diary",      num: 5 },
-  ];
+  // 8번: Start 버튼 로직
+  const handleStart = (l) => {
+    const key = `${l.LessonID}_${l.SourceID}`;
+    const qp = quizProgress[key];
+    const sd = userData.stepDone?.[key] || {};
+    const stepList = getStepList(l);
+
+    // 9번: 진행중이면 이어하기 모달
+    if (qp && qp !== "done") {
+      let resumeScreen = "stepRead";
+      if (qp.startsWith("preview_")) resumeScreen = "stepRead";
+      else if (qp.startsWith("build_")) resumeScreen = "stepBuild";
+      else resumeScreen = "stepQuiz";
+      setResumeTarget({ lessonId: l.LessonID, sourceId: l.SourceID, screen: resumeScreen, key });
+      setResumeModal(true);
+      return;
+    }
+
+    for (const step of stepList) {
+      const stepKey = step.id.replace("step", "").toLowerCase();
+      const isDoneStep = step.id === "stepQuiz" ? qp === "done" : sd[stepKey];
+      if (!isDoneStep) {
+        go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID });
+        return;
+      }
+    }
+    go(stepList[0].id, { lessonId: l.LessonID, sourceId: l.SourceID });
+  };
+
+  const handleResume = () => {
+    if (resumeTarget) go(resumeTarget.screen, { lessonId: resumeTarget.lessonId, sourceId: resumeTarget.sourceId, resume: true });
+    setResumeModal(false);
+  };
+  const handleFresh = () => {
+    if (resumeTarget) {
+      setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [resumeTarget.key]: null }, stepDone: { ...prev.stepDone, [resumeTarget.key]: {} } }));
+      const l = sortedLessons.find(x => x.LessonID === resumeTarget.lessonId);
+      if (l) {
+        const stepList = getStepList(l);
+        go(stepList[0].id, { lessonId: resumeTarget.lessonId, sourceId: resumeTarget.sourceId });
+      }
+    }
+    setResumeModal(false);
+  };
 
   return (
-    <div style={S.page}>
-      <div style={S.inner}>
-        {/* 헤더 */}
-        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, minHeight: 48 }}>
-          {/* Course 버튼 - 교재 선택 팝업 */}
-          <button onClick={() => go("courseSelect")} style={{ background: C.primaryLight, border: "none", borderRadius: 20, padding: "8px 16px", fontWeight: 700, fontSize: 14, color: C.primaryDark, cursor: "pointer" }}>
-            Course ▾
-          </button>
-          
-
-          {/* 중앙 불꽃 */}
-          <div onClick={() => go("calendar")} style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4, background: C.accentLight, borderRadius: 20, padding: "8px 14px", cursor: "pointer" }}>
-            <span style={{ fontSize: 18 }}>🔥</span>
-            <span style={{ fontWeight: 800, fontSize: 16, color: C.accent }}>{streakDays}</span>
-          </div>
-          {/* 프로필 */}
-          <div style={{ position: "relative" }}>
-            <img src={user?.photoURL || duckImg} alt="profile" onClick={() => setMenuOpen((v) => !v)}
-              style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", cursor: "pointer", border: `2.5px solid ${C.primary}` }} />
-            {menuOpen && (
-              <div style={{ position: "absolute", right: 0, top: 48, background: "#fff", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", padding: 8, minWidth: 140, zIndex: 100 }}>
-                <button onClick={() => { setMenuOpen(false); signOut(auth); }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", textAlign: "left", cursor: "pointer", fontSize: 14, color: C.text, borderRadius: 8 }}>로그아웃</button>
-                <button onClick={() => { setMenuOpen(false); handleDeleteAccount(); }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", textAlign: "left", cursor: "pointer", fontSize: 14, color: "#EF4444", borderRadius: 8 }}>회원 탈퇴</button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 카테고리명 + 교재명 */}
-        {selectedSource && (() => {
-          const cat = categories.find(c => c.CategoryID === selectedSource.CategoryID);
-          return (
-            <div style={{ marginBottom: 20 }}>
-              {cat && <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 4 }}>{cat.Name}</div>}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{selectedSource.Name}</div>
-                <button onClick={() => { if (selectedLesson) go("scriptDetail", { lessonId: selectedLesson.LessonID, sourceId: activeSourceId }); else if (sortedLessons[0]) go("scriptDetail", { lessonId: sortedLessons[0].LessonID, sourceId: activeSourceId }); }}
-                  style={{ background: C.primaryLight, border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, color: C.primaryDark }}>📖 스크립트</button>
-              </div>
+    <div style={{ position: "fixed", inset: 0, background: C.bg, fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif", paddingBottom: 70, display: "flex", flexDirection: "column" }}>
+      <div style={{ maxWidth: 480, margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+        {/* 10번: 고정 헤더 영역 */}
+        <div style={{ padding: "20px 16px 0", flexShrink: 0, background: C.bg }}>
+          {/* 상단 바 */}
+          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, minHeight: 48 }}>
+            <button onClick={() => go("courseSelect")} style={{ background: C.primaryLight, border: "none", borderRadius: 20, padding: "8px 16px", fontWeight: 700, fontSize: 14, color: C.primaryDark, cursor: "pointer" }}>
+              Course ▾
+            </button>
+            <div onClick={() => go("calendar")} style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4, background: C.accentLight, borderRadius: 20, padding: "8px 14px", cursor: "pointer" }}>
+              <span style={{ fontSize: 18 }}>🔥</span>
+              <span style={{ fontWeight: 800, fontSize: 16, color: C.accent }}>{streakDays}</span>
             </div>
-          );
-        })()}
-
-        {/* 레슨 목록 */}
-        {sortedLessons.map((l) => {
-          const source = sources.find((s) => s.SourceID === l.SourceID);
-          const category = categories.find((c) => c.CategoryID === source?.CategoryID);
-          const key = `${l.LessonID}_${l.SourceID}`;
-          const qp = quizProgress[key];
-          const isDone = qp === "done";
-          const isInProgress = qp && qp !== "done";
-          const isSelected = selectedLesson?.LessonID === l.LessonID;
-          const isTodayLesson = todayLesson?.LessonID === l.LessonID;
-          const firstItem = items.find(it => it.LessonID === l.LessonID);
-          const sd = userData.stepDone?.[key] || {};
-
-          return (
-            <div key={l.LessonID} style={{ marginBottom: 10 }}>
-              {/* 레슨 카드 */}
-              <div
-                ref={(el) => {
-                  lessonRefs.current[l.LessonID] = el;
-                }}
-                style={{ ...S.card, marginBottom: 0, cursor: "pointer", border: isSelected ? `2px solid ${C.primary}` : `1.5px solid ${C.border}` }}
-                onClick={() => {
-                  if (isSelected) { setSelectedLesson(null); return; }
-                  setSelectedLesson(l);
-                  setTimeout(() => {
-                    lessonRefs.current[l.LessonID]?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }, 50);
-                }}
-              >
-                {/* 레슨명 + 화살표 */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: C.text, textAlign: "left", flex: 1 }}>{l.Title}</div>
-                  <span style={{ color: C.sub, fontSize: 18, marginLeft: 8, transform: isSelected ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}>›</span>
-                </div>
-                {/* 뱃지 */}
-                {(isDone || isInProgress) && (
-                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                    {isDone && <Badge label="완료" color={C.done} bg={C.doneBg} />}
-                    {isInProgress && <Badge label="진행중" color={C.accent} bg={C.accentLight} />}
-                  </div>
-                )}
-              </div>
-
-              {/* 선택된 레슨 펼침 */}
-              {isSelected && (
-                <div style={{ background: C.primaryLight, borderRadius: "0 0 16px 16px", padding: "12px 16px 16px" }}>
-                  <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-                    {stepList.map((step) => {
-                      const stepKey = step.id.replace("step", "").toLowerCase();
-                      const isDoneStep = step.id === "stepQuiz" ? qp === "done" : sd[stepKey];
-                      return (
-                        <button key={step.id}
-                          onClick={() => { go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID }); setSelectedLesson(null); }}
-                          style={{ background: isDoneStep ? C.primary : "#fff", border: `1.5px solid ${isDoneStep ? C.primary : C.border}`, borderRadius: 14, padding: "14px 10px", cursor: "pointer", textAlign: "center", minWidth: 76, flexShrink: 0 }}>
-                          <div style={{ fontSize: 11, color: isDoneStep ? "rgba(255,255,255,0.8)" : C.sub, marginBottom: 8, fontWeight: 600 }}>{step.num}단계</div>
-                          <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}>
-                            <StepIcon type={step.type} color={isDoneStep ? "#fff" : C.primaryDark} />
-                          </div>
-                          <div style={{ fontWeight: 700, fontSize: 11, color: isDoneStep ? "#fff" : C.text, lineHeight: 1.3 }}>{step.label}</div>
-                          {isDoneStep && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", marginTop: 4 }}>✓</div>}
-                        </button>
-                      );
-                    })}
-                  </div>
+            <div style={{ position: "relative" }}>
+              <img src={user?.photoURL || duckImg} alt="profile" onClick={() => setMenuOpen((v) => !v)}
+                style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", cursor: "pointer", border: `2.5px solid ${C.primary}` }} />
+              {menuOpen && (
+                <div style={{ position: "absolute", right: 0, top: 48, background: "#fff", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", padding: 8, minWidth: 140, zIndex: 100 }}>
+                  <button onClick={() => { setMenuOpen(false); signOut(auth); }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", textAlign: "left", cursor: "pointer", fontSize: 14, color: C.text, borderRadius: 8 }}>로그아웃</button>
+                  <button onClick={() => { setMenuOpen(false); handleDeleteAccount(); }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", textAlign: "left", cursor: "pointer", fontSize: 14, color: "#EF4444", borderRadius: 8 }}>회원 탈퇴</button>
                 </div>
               )}
             </div>
-          );
-        })}
+          </div>
+
+          {/* 2,3번: 카테고리명(작게) + 교재명(크게) + 4번: 스크립트 아이콘만 */}
+          {selectedSource && (
+            <div style={{ marginBottom: 12 }}>
+              {selectedCat && <div style={{ fontSize: 13, fontWeight: 600, color: C.sub, marginBottom: 4, textAlign: "left" }}>{selectedCat.Name}</div>}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.text, textAlign: "left", flex: 1 }}>{selectedSource.Name}</div>
+                <button onClick={() => {
+                  const targetLesson = selectedLesson || todayLesson || sortedLessons[0];
+                  if (targetLesson) go("scriptDetail", { lessonId: targetLesson.LessonID, sourceId: activeSourceId, fromHome: true });
+                }}
+                  style={{ background: C.primaryLight, border: "none", borderRadius: 10, width: 44, height: 44, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>📖</button>
+              </div>
+            </div>
+          )}
+          <div style={{ height: 1, background: C.border }} />
+        </div>
+
+        {/* 레슨 리스트 (스크롤 영역) */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 20px" }}>
+          {sortedLessons.map((l) => {
+            const key = `${l.LessonID}_${l.SourceID}`;
+            const qp = quizProgress[key];
+            const isDone = qp === "done";
+            const isInProgress = qp && qp !== "done";
+            const isSelected = selectedLesson?.LessonID === l.LessonID;
+            const sd = userData.stepDone?.[key] || {};
+            const stepList = getStepList(l);
+
+            return (
+              <div key={l.LessonID} ref={(el) => { lessonRefs.current[l.LessonID] = el; }} style={{ marginBottom: 10 }}>
+                <div
+                  style={{ ...S.card, marginBottom: 0, cursor: "pointer", border: isSelected ? `2px solid ${C.primary}` : `1.5px solid ${C.border}` }}
+                  onClick={() => {
+                    if (isSelected) { setSelectedLesson(null); return; }
+                    setSelectedLesson(l);
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: C.text, textAlign: "left", flex: 1 }}>{l.Title}</div>
+                    <span style={{ color: C.sub, fontSize: 18, marginLeft: 8, transform: isSelected ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}>›</span>
+                  </div>
+                  {(isDone || isInProgress) && (
+                    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                      {isDone && <Badge label="완료" color={C.done} bg={C.doneBg} />}
+                      {isInProgress && <Badge label="진행중" color={C.accent} bg={C.accentLight} />}
+                    </div>
+                  )}
+                </div>
+
+                {/* 7번: 동그라미 하위학습 + 6번: 체크 표시 + 8번: Start 버튼 */}
+                {isSelected && (
+                  <div style={{ background: C.primaryLight, borderRadius: "0 0 16px 16px", padding: "16px 16px 16px" }}>
+                    <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 16 }}>
+                      {stepList.map((step) => {
+                        const stepKey = step.id.replace("step", "").toLowerCase();
+                        const isDoneStep = step.id === "stepQuiz" ? qp === "done" : sd[stepKey];
+                        return (
+                          <div key={step.id}
+                            onClick={() => go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID })}
+                            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", width: 56 }}>
+                            <div style={{
+                              position: "relative",
+                              width: 48, height: 48, borderRadius: "50%",
+                              background: isDoneStep ? C.primary : "#fff",
+                              border: `2px solid ${isDoneStep ? C.primary : C.border}`,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                            }}>
+                              <StepIcon type={step.type} color={isDoneStep ? "#fff" : C.primaryDark} />
+                              {isDoneStep && (
+                                <div style={{
+                                  position: "absolute", top: -2, right: -2,
+                                  width: 16, height: 16, borderRadius: "50%",
+                                  background: "#22C55E", display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>
+                                  <span style={{ color: "#fff", fontSize: 10, fontWeight: 900 }}>✓</span>
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ fontWeight: 600, fontSize: 10, color: isDoneStep ? C.primaryDark : C.sub, textAlign: "center", lineHeight: 1.2 }}>{step.label}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button onClick={() => handleStart(l)}
+                      style={{ ...S.btn, ...S.btnPrimary, borderRadius: 14, fontSize: 16, padding: "14px" }}>
+                      Start
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {/* 13번: 마지막 레슨도 상단 스크롤 가능하도록 하단 여백 */}
+          <div style={{ height: 400 }} />
+        </div>
       </div>
+      {/* 9번: 이어하기 모달 */}
+      <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
+        buttons={[{ label: "처음부터", onClick: handleFresh }, { label: "이어하기", primary: true, onClick: handleResume }]} />
     </div>
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// 교재 선택
-// ════════════════════════════════════════════════════════════════════════════════
 function CourseSelectScreen({ go, categories, sources, lessons, setSelectedSourceId }) {
   const catGroups = categories.map((cat) => ({
     cat,
@@ -649,68 +705,6 @@ function CourseSelectScreen({ go, categories, sources, lessons, setSelectedSourc
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// 레슨 스텝
-// ════════════════════════════════════════════════════════════════════════════════
-function LessonStepsScreen({ go, nav, lessons, sources, userData, setUserData }) {
-  const { lessonId, sourceId } = nav;
-  const lesson = lessons.find((l) => l.LessonID === lessonId);
-  const source = sources.find((s) => s.SourceID === sourceId);
-  const { quizProgress = {}, stepDone = {} } = userData;
-  const key = `${lessonId}_${sourceId}`;
-  const qp = quizProgress[key];
-  const sd = stepDone[key] || {};
-  const [resumeModal, setResumeModal] = useState(false);
-
-  useEffect(() => { if (qp && qp !== "done" && !nav.skipResume) setResumeModal(true); }, []);
-
-  const getResumeScreen = () => {
-    if (!qp || qp === "done") return null;
-    if (qp.startsWith("preview_")) return "stepRead";
-    if (qp.startsWith("build_")) return "stepBuild";
-    return "stepQuiz";
-  };
-
-  const handleResume = () => { const s = getResumeScreen(); if (s) go(s, { lessonId, sourceId, resume: true }); setResumeModal(false); };
-  const handleFresh = () => {
-    setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: null }, stepDone: { ...prev.stepDone, [key]: {} } }));
-    setResumeModal(false);
-  };
-
-  const steps = [
-    lesson?.VideoURL ? { id: "video", icon: "🎬", label: "영상 보기", done: sd.video, screen: "stepVideo" } : null,
-    { id: "read", icon: "🗣️", label: "따라읽기", done: sd.read, screen: "stepRead" },
-    { id: "build", icon: "🧩", label: "문장 만들기", done: sd.build, screen: "stepBuild" },
-    { id: "quiz", icon: "🎤", label: "Speaking Test", done: qp === "done", screen: "stepQuiz" },
-    { id: "diary", icon: "📔", label: "Diary 쓰기", done: sd.diary, screen: "stepDiary" },
-  ].filter(Boolean);
-
-  return (
-    <div style={S.page}>
-      <div style={S.inner}>
-        <Header title={lesson?.Title} onBack={() => go("home")} />
-        <div style={{ fontSize: 13, color: C.sub, marginBottom: 20 }}>{source?.Name}</div>
-        {steps.map((step, i) => (
-          <div key={step.id} onClick={() => go(step.screen, { lessonId, sourceId })}
-            style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", gap: 14, border: step.done ? `1.5px solid ${C.doneBorder}` : `1.5px solid ${C.border}`, background: step.done ? C.doneBg : C.card }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{step.icon}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 15, color: step.done ? C.done : C.text, textAlign: "left" }}>{step.label}</div>
-              <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{i + 1}단계</div>
-            </div>
-            {step.done ? <Badge label="완료" color={C.done} bg={C.doneBg} /> : <span style={{ color: C.sub, fontSize: 20 }}>›</span>}
-          </div>
-        ))}
-      </div>
-      <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
-        buttons={[{ label: "처음부터", onClick: handleFresh }, { label: "이어하기", primary: true, onClick: handleResume }]} />
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════════════════
-// 따라읽기
-// ════════════════════════════════════════════════════════════════════════════════
 function StepReadScreen({ go, nav, items, sources, categories, userData, setUserData }) {
   const { lessonId, sourceId, resume } = nav;
   const key = `${lessonId}_${sourceId}`;
@@ -777,7 +771,6 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
       <div style={S.inner}>
         <Header title="따라읽기" onQuit={() => { stopMic(); stopSpeak(); go("home"); }} />
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
-        {/* 회차 표시 */}
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
             <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round === r ? "#EDE1D6" : C.borderLight, color: round === r ? "#000" : C.sub }}>
@@ -810,9 +803,6 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// 문장 만들기
-// ════════════════════════════════════════════════════════════════════════════════
 function StepBuildScreen({ go, nav, items, sources, categories, userData, setUserData }) {
   const { lessonId, sourceId, resume } = nav;
   const key = `${lessonId}_${sourceId}`;
@@ -899,9 +889,6 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// Speaking Test
-// ════════════════════════════════════════════════════════════════════════════════
 function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   const { lessonId, sourceId, resume } = nav;
   const key = `${lessonId}_${sourceId}`;
@@ -963,9 +950,6 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// 영상 보기
-// ════════════════════════════════════════════════════════════════════════════════
 function StepVideoScreen({ go, nav, lessons, setUserData }) {
   const { lessonId, sourceId } = nav;
   const lesson = lessons.find((l) => l.LessonID === lessonId);
@@ -992,9 +976,6 @@ function StepVideoScreen({ go, nav, lessons, setUserData }) {
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// 다이어리 쓰기
-// ════════════════════════════════════════════════════════════════════════════════
 function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
   const { lessonId, sourceId } = nav;
   const lesson = lessons.find((l) => l.LessonID === lessonId);
@@ -1030,9 +1011,6 @@ function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// Review 탭
-// ════════════════════════════════════════════════════════════════════════════════
 function ReviewTab({ userData, setUserData, items, go }) {
   const { progress = {} } = userData;
   const reviewItems = items.filter((it) => { const p = progress[it.ItemID]; return p?.nextReview && p.nextReview <= today(); });
@@ -1070,9 +1048,6 @@ function ReviewTab({ userData, setUserData, items, go }) {
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// Like 탭
-// ════════════════════════════════════════════════════════════════════════════════
 function LikeTab({ userData, setUserData, items }) {
   const { favorites = {} } = userData;
   const favItems = items.filter((it) => favorites[it.ItemID]);
@@ -1132,9 +1107,6 @@ function LikeTab({ userData, setUserData, items }) {
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// Diary 탭
-// ════════════════════════════════════════════════════════════════════════════════
 function DiaryTab({ userData, setUserData, go }) {
   const { diaries = [] } = userData;
   const sorted = [...diaries].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
@@ -1165,9 +1137,6 @@ function DiaryTab({ userData, setUserData, go }) {
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// Calendar
-// ════════════════════════════════════════════════════════════════════════════════
 function CalendarScreen({ go, userData }) {
   const { studyDays = [] } = userData;
   const [monthOffset, setMonthOffset] = useState(0);
@@ -1227,15 +1196,11 @@ function CalendarScreen({ go, userData }) {
             })}
           </div>
         </div>
-        
       </div>
     </div>
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// Diary Detail
-// ════════════════════════════════════════════════════════════════════════════════
 function DiaryDetailScreen({ go, nav, userData }) {
   const { diaryId } = nav;
   const diary = userData.diaries?.find((d) => d.id === diaryId);
@@ -1261,9 +1226,6 @@ function DiaryDetailScreen({ go, nav, userData }) {
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// Script 탭
-// ════════════════════════════════════════════════════════════════════════════════
 function ScriptTab({ go, sources, lessons, categories }) {
   const catGroups = categories.map((cat) => ({
     cat,
@@ -1329,15 +1291,10 @@ function ScriptDetailScreen({ go, nav, lessons, sources, items, userData, setUse
   const toggleFav = (itemId) => {
     setUserData((prev) => { const f = { ...prev.favorites }; if (f[itemId]) delete f[itemId]; else f[itemId] = true; return { ...prev, favorites: f }; });
   };
-  const handleBack = () => {
-    if (nav.fromHome) go("home");
-    else if (nav.fromLesson) go("home");
-    else go("scriptSource", { sourceId });
-  };
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title={lesson?.Title} onBack={handleBack} />
+        <Header title={lesson?.Title} onHome={() => go("home")} />
         <div style={{ fontSize: 12, color: C.sub, marginBottom: 20 }}>{source?.Name}</div>
         {lessonItems.map((item) => (
           <div key={item.ItemID} style={{ ...S.card, marginBottom: 12 }}>
@@ -1354,9 +1311,6 @@ function ScriptDetailScreen({ go, nav, lessons, sources, items, userData, setUse
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-// ROOT APP
-// ════════════════════════════════════════════════════════════════════════════════
 export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -1431,7 +1385,6 @@ export default function App() {
   if (screen) {
     const screenMap = {
       courseSelect: <CourseSelectScreen {...shared} setSelectedSourceId={setSelectedSourceId} />,
-      lessonSteps: <LessonStepsScreen {...shared} />,
       stepVideo: <StepVideoScreen {...shared} />,
       stepRead: <StepReadScreen {...shared} />,
       stepBuild: <StepBuildScreen {...shared} />,

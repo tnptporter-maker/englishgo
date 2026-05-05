@@ -725,6 +725,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   const totalRounds = 2;
 
   useEffect(() => { if (resume && savedState) setResumeModal(true); }, []);
+  useEffect(() => { if (curItem) { stopSpeak(); setTimeout(() => speak(curItem.English), 300); } }, [idx]);
   const handleResumeContinue = () => setResumeModal(false);
   const handleResumeFresh = () => { setIdx(0); setRound(1); setResumeModal(false); };
 
@@ -764,19 +765,19 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
-            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round >= r ? C.primary : "#fff", color: round >= r ? "#fff" : C.sub, border: `1.5px solid ${round >= r ? C.primary : C.border}` }}>
+            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round >= r ? C.primaryDark : "#fff", color: round >= r ? "#fff" : C.sub, border: `1.5px solid ${round >= r ? C.primaryDark : C.border}` }}>
               {r}회차
             </div>
           ))}
         </div>
-        <div style={{ ...S.card, textAlign: "center", marginBottom: 16 }}>
+        <div style={{ ...S.card, textAlign: "center", marginBottom: 16, minHeight: 180, display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 20, lineHeight: 1.6 }}>{curItem.Korean}</div>
           <div style={{ width: "100%", height: 1, background: C.borderLight, marginBottom: 20 }} />
           <div style={{ fontSize: 20, fontWeight: 700, color: C.primaryDark, lineHeight: 1.5 }}>{curItem.English}</div>
         </div>
         <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
           <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#fff", color: C.text, fontWeight: 700, fontSize: 14, border: `1.5px solid ${C.border}` }}>🔊 듣기</button>
-          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#8DB86A" : "#C5DFA0", color: "#4A5E2A", fontWeight: 700, fontSize: 14 }}>
+          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#2DC7A0" : "#4DD9B8", color: "#fff", fontWeight: 700, fontSize: 14 }}>
             {listening ? "⏹ 중지" : "🎤 따라읽기"}
           </button>
         </div>

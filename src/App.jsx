@@ -765,7 +765,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
-            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round >= r ? C.primaryDark : "#fff", color: round >= r ? "#fff" : C.sub, border: `1.5px solid ${round >= r ? C.primaryDark : C.border}` }}>
+            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round >= r ? "#FDE68A" : "#fff", color: round >= r ? C.primaryDark : C.sub, border: `1.5px solid ${round >= r ? "#FCD34D" : C.border}` }}>
               {r}회차
             </div>
           ))}

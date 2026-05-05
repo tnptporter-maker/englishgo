@@ -892,7 +892,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
             const isSelected = selected.find(s => s.id === opt.id);
             return (
               <button key={opt.id} onClick={() => isSelected ? handleDeselect(opt, selected.findIndex(s => s.id === opt.id)) : handleSelect(opt)}
-                style={{ background: isSelected ? "#D1D5DB" : C.primaryLight, color: isSelected ? C.text : C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
+                style={{ background: isSelected ? "#FCD34D" : C.primaryLight, color: isSelected ? "#92400E" : C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
             );
           })}
         </div>

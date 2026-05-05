@@ -748,12 +748,20 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
     } else if (round < totalRounds) {
       setRound(round + 1); setIdx(0);
     } else {
-      setUserData((prev) => ({
-        ...prev,
-        stepDone: { ...prev.stepDone, [key]: { ...(prev.stepDone[key] || {}), read: true } },
-        studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()],
-      }));
-      go("stepBuild", { lessonId, sourceId });
+      setUserData((prev) => {
+        const next = {
+          ...prev,
+          stepDone: { ...prev.stepDone, [key]: { ...(prev.stepDone[key] || {}), read: true } },
+          studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()],
+        };
+        const sd = next.stepDone[key] || {};
+        if (sd.build) {
+          go("stepQuiz", { lessonId, sourceId });
+        } else {
+          go("stepBuild", { lessonId, sourceId });
+        }
+        return next;
+      });
     }
   };
 

@@ -115,40 +115,34 @@ const fetchSheet = async (sheetName) => {
 };
 
 const splitIntoChunks = (sentence) => {
-  const CONJUNCTIONS = /\b(and|but|or|so|because|until|when|while|if|that|which|who|before|after|as|though|although|unless)\b/i;
-  const sentenceParts = [];
-  const matches = sentence.match(/[^.?!]+[.?!]*/g);
-  if (matches) matches.forEach(m => { if (m.trim()) sentenceParts.push(m.trim()); });
-  else sentenceParts.push(sentence);
-  let chunks = [];
-  for (const part of sentenceParts) {
-    const commaParts = part.split(/,\s*/);
-    if (commaParts.length > 1) {
-      commaParts.forEach((p, i) => { if (p.trim()) chunks.push(i < commaParts.length - 1 ? p.trim() + "," : p.trim()); });
-    } else { chunks.push(part); }
-  }
-  if (chunks.length <= 2) {
-    const newChunks = [];
-    for (const chunk of chunks) {
-      const words = chunk.split(" ");
-      let splitIdx = -1;
-      for (let i = 1; i < words.length - 1; i++) { if (CONJUNCTIONS.test(words[i])) { splitIdx = i; break; } }
-      if (splitIdx > 0 && words.length > 4) { newChunks.push(words.slice(0, splitIdx).join(" ")); newChunks.push(words.slice(splitIdx).join(" ")); }
-      else { newChunks.push(chunk); }
+  const SPLIT_BEFORE = /^(and|but|or|so|because|until|when|while|if|before|after|though|although|unless)$/i;
+  const words = sentence.split(" ");
+  const total = words.length;
+  if (total <= 3) return [sentence];
+
+  // 목표 청크 수: 3~4개
+  const targetChunks = total <= 8 ? 3 : 4;
+  const targetSize = Math.ceil(total / targetChunks);
+
+  const chunks = [];
+  let start = 0;
+
+  while (start < total) {
+    let end = Math.min(start + targetSize, total);
+    // 청크 끝이 문장 끝이 아니면 접속사 앞에서 자르기 시도
+    if (end < total) {
+      let splitAt = -1;
+      // end 근처(±2)에서 접속사 찾기
+      for (let i = end - 2; i <= Math.min(end + 2, total - 1); i++) {
+        if (i > start && SPLIT_BEFORE.test(words[i])) { splitAt = i; break; }
+      }
+      if (splitAt > start) end = splitAt;
     }
-    chunks = newChunks;
+    chunks.push(words.slice(start, end).join(" "));
+    start = end;
   }
-  while (chunks.length > 5) {
-    let minLen = Infinity, minIdx = 0;
-    for (let i = 0; i < chunks.length - 1; i++) {
-      const len = chunks[i].split(" ").length + chunks[i+1].split(" ").length;
-      if (len < minLen) { minLen = len; minIdx = i; }
-    }
-    chunks.splice(minIdx, 2, chunks[minIdx] + " " + chunks[minIdx + 1]);
-  }
-  return chunks.length > 1 ? chunks : sentence.split(" ").reduce((acc, w, i) => {
-    const g = Math.floor(i / 2); acc[g] = acc[g] ? acc[g] + " " + w : w; return acc;
-  }, []);
+
+  return chunks.length > 1 ? chunks : [sentence];
 };
 
 
@@ -889,14 +883,14 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
               const isSelected = selected.find(s => s.id === opt.id);
               return (
                 <button key={opt.id} onClick={() => isSelected ? handleDeselect(opt, selected.findIndex(s => s.id === opt.id)) : handleSelect(opt)}
-                  style={{ background: isSelected ? C.primary : C.primaryLight, color: isSelected ? "#fff" : C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
+                  style={{ background: isSelected ? "#D1D5DB" : C.primaryLight, color: isSelected ? C.text : C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
               );
             })}
         </div>
         {result !== null && <ResultCard correct={result} english={curItem.English} />}
         {result === null
           ? <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-              <button onClick={() => { setSelected([]); }} style={{ ...S.btn, ...S.btnGhost, flex: 1 }}>초기화</button>
+              <button onClick={() => { setSelected([]); }} style={{ ...S.btn, flex: 1, background: "#fff", color: C.sub, border: `1.5px solid ${C.border}` }}>초기화</button>
               <button onClick={handleSubmit} disabled={selected.length === 0} style={{ ...S.btn, ...S.btnPrimary, flex: 1, opacity: selected.length === 0 ? 0.5 : 1 }}>제출</button>
             </div>
           : <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary, marginTop: 12 }}>{idx + 1 < shuffledItems.length ? "다음" : "Speaking Test"}</button>}

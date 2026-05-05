@@ -161,7 +161,7 @@ function useMic(onResult) {
 
   const startNewRec = useCallback((SR) => {
     const rec = new SR();
-    rec.lang = "en-US"; rec.continuous = true; rec.interimResults = true;
+    rec.lang = "en-US"; rec.continuous = true; rec.interimResults = false;
     rec.onresult = (e) => {
       let final = "";
       for (let i = 0; i < e.results.length; i++) {
@@ -170,7 +170,7 @@ function useMic(onResult) {
         }
       }
       if (final.trim()) {
-        accumulatedRef.current = final.trim();
+        accumulatedRef.current += (accumulatedRef.current ? " " : "") + final.trim();
         onResult(accumulatedRef.current);
       }
     };
@@ -525,6 +525,21 @@ function HomeScreen({ go, user, userData, categories, sources, lessons, items, s
             )}
           </div>
         </div>
+
+        {/* 카테고리명 + 교재명 */}
+        {selectedSource && (() => {
+          const cat = categories.find(c => c.CategoryID === selectedSource.CategoryID);
+          return (
+            <div style={{ marginBottom: 20 }}>
+              {cat && <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 4 }}>{cat.Name}</div>}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{selectedSource.Name}</div>
+                <button onClick={() => { if (selectedLesson) go("scriptDetail", { lessonId: selectedLesson.LessonID, sourceId: activeSourceId }); else if (sortedLessons[0]) go("scriptDetail", { lessonId: sortedLessons[0].LessonID, sourceId: activeSourceId }); }}
+                  style={{ background: C.primaryLight, border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, color: C.primaryDark }}>📖 스크립트</button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 레슨 목록 */}
         {sortedLessons.map((l) => {
@@ -1018,7 +1033,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
 // ════════════════════════════════════════════════════════════════════════════════
 // Review 탭
 // ════════════════════════════════════════════════════════════════════════════════
-function ReviewTab({ userData, setUserData, items }) {
+function ReviewTab({ userData, setUserData, items, go }) {
   const { progress = {} } = userData;
   const reviewItems = items.filter((it) => { const p = progress[it.ItemID]; return p?.nextReview && p.nextReview <= today(); });
   const [done, setDone] = useState(false);
@@ -1048,7 +1063,7 @@ function ReviewTab({ userData, setUserData, items }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <div style={{ fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 20 }}>오늘의 복습</div>
+        <Header title="오늘의 복습" onQuit={() => go("home")} />
         <QuizCore rawItems={reviewItems} onResult={handleResult} onDone={() => setDone(true)} />
       </div>
     </div>
@@ -1309,7 +1324,7 @@ function ScriptDetailScreen({ go, nav, lessons, sources, items, userData, setUse
   const { lessonId, sourceId } = nav;
   const lesson = lessons.find((l) => l.LessonID === lessonId);
   const source = sources.find((s) => s.SourceID === sourceId);
-  const lessonItems = items.filter((it) => it.LessonID === lessonId);
+  const lessonItems = items.filter((it) => it.LessonID === lessonId).sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0));
   const { favorites = {} } = userData;
   const toggleFav = (itemId) => {
     setUserData((prev) => { const f = { ...prev.favorites }; if (f[itemId]) delete f[itemId]; else f[itemId] = true; return { ...prev, favorites: f }; });

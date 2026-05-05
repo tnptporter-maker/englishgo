@@ -122,7 +122,7 @@ const fetchBlanks = async (sentence) => {
       body: JSON.stringify({ sentence }),
     });
     const data = await res.json();
-    console.log("blanks response:", JSON.stringify(data));
+    console.log("blanks:", JSON.stringify(data));
     if (Array.isArray(data.blanks) && data.blanks.length > 0) return data.blanks;
   } catch {}
   return [];

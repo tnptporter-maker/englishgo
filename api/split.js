@@ -18,14 +18,12 @@ export default async function handler(req, res) {
     );
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    console.log("gemini raw:", JSON.stringify(data).slice(0, 500));
-    console.log("gemini text:", text);
     const match = text.match(/\[.*\]/s);
     if (match) {
       const blanks = JSON.parse(match[0]);
-      res.status(200).json({ blanks });
+      res.status(200).json({ blanks, debug: text });
     } else {
-      res.status(200).json({ blanks: [] });
+      res.status(200).json({ blanks: [], debug: text, raw: JSON.stringify(data).slice(0, 300) });
     }
   } catch (e) {
     res.status(500).json({ error: e.message });

@@ -725,7 +725,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   const totalRounds = 2;
 
   useEffect(() => { if (resume && savedState) setResumeModal(true); }, []);
-  useEffect(() => { if (curItem) { stopSpeak(); setTimeout(() => speak(curItem.English), 300); } }, [idx]);
+  useEffect(() => { if (curItem) { stopSpeak(); setTimeout(() => speak(curItem.English), 500); } }, [idx]);
   const handleResumeContinue = () => setResumeModal(false);
   const handleResumeFresh = () => { setIdx(0); setRound(1); setResumeModal(false); };
 

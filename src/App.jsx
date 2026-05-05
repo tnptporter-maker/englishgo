@@ -1289,7 +1289,7 @@ function ScriptSourceScreen({ go, nav, sources, lessons, items }) {
               style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 14, color: C.text, textAlign: "left" }}>{l.Title}</div>
-                <div style={{ fontSize: 12, color: C.sub, marginTop: 4 }}>{lessonItems.length}문장</div>
+                <div style={{ fontSize: 12, color: C.sub, marginTop: 4, textAlign: "left" }}>{lessonItems.length}문장</div>
               </div>
               <span style={{ color: C.sub, fontSize: 20 }}>›</span>
             </div>

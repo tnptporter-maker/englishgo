@@ -127,7 +127,7 @@ const fetchSheet = async (sheetName) => {
   const rows = parseCSV(text);
   const headers = rows[0].map(h => h.trim());
   return rows.slice(1).map(vals =>
-    Object.fromEntries(headers.map((h, i) => [h, (vals[i] || "").trim()]))
+    Object.fromEntries(headers.map((h, i) => [h, (vals[i] || "").replace(/\r/g, "").trim()]))
   );
 };
 

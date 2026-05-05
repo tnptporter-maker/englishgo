@@ -832,34 +832,48 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
 
   const getChunks = (sentence) => {
     const CONJUNCTIONS = /^(and|but|or|so|because|until|when|while|if|before|after|though|although|unless|that|which|who)$/i;
-    const PREPOSITIONS = /^(for|in|on|at|to|of|with|by|from|about|as|into|through|during)$/i;
+    const PREPOSITIONS = /^(for|in|on|at|to|of|with|by|from|about|as|into|through|during|a|an|the)$/i;
     const words = sentence.split(" ");
-    // 항상 구두점 기준으로 먼저 분리 시도
-    const punctChunks = sentence.split(/(?<=[.?!])\s+/);
-    if (punctChunks.length > 1) return punctChunks;
-    if (words.length <= 3) return [sentence];
-    let chunks = [];
-    let current = [];
-    for (let i = 0; i < words.length; i++) {
-      if (i > 0 && current.length >= 2 && (CONJUNCTIONS.test(words[i]) || PREPOSITIONS.test(words[i]))) {
-        chunks.push(current.join(" "));
-        current = [words[i]];
-      } else {
-        current.push(words[i]);
+
+    // 각 문장을 접속사/전치사 기준으로 쪼개는 내부 함수
+    const splitOne = (s) => {
+      const ws = s.split(" ");
+      if (ws.length <= 3) return [s];
+      let chunks = [];
+      let current = [];
+      for (let i = 0; i < ws.length; i++) {
+        if (i > 0 && current.length >= 2 && (CONJUNCTIONS.test(ws[i]) || PREPOSITIONS.test(ws[i]))) {
+          chunks.push(current.join(" "));
+          current = [ws[i]];
+        } else {
+          current.push(ws[i]);
+        }
       }
+      if (current.length > 0) chunks.push(current.join(" "));
+      // 너무 긴 청크 추가 분리
+      const out = [];
+      for (const chunk of chunks) {
+        const cw = chunk.split(" ");
+        if (cw.length > 8) {
+          const mid = Math.ceil(cw.length / 2);
+          out.push(cw.slice(0, mid).join(" "));
+          out.push(cw.slice(mid).join(" "));
+        } else { out.push(chunk); }
+      }
+      return out.length > 1 ? out : [s];
+    };
+
+    // 구두점 기준으로 먼저 문장 분리
+    const punctChunks = sentence.split(/(?<=[.?!])\s+/).filter(s => s.trim());
+    if (punctChunks.length > 1) {
+      // 각 문장도 추가로 쪼개기
+      const all = [];
+      for (const pc of punctChunks) { splitOne(pc).forEach(c => all.push(c)); }
+      return all;
     }
-    if (current.length > 0) chunks.push(current.join(" "));
-    // 너무 긴 청크 추가 분리
-    const result2 = [];
-    for (const chunk of chunks) {
-      const w = chunk.split(" ");
-      if (w.length > 8) {
-        const mid = Math.ceil(w.length / 2);
-        result2.push(w.slice(0, mid).join(" "));
-        result2.push(w.slice(mid).join(" "));
-      } else { result2.push(chunk); }
-    }
-    return result2.length > 1 ? result2 : [sentence];
+
+    if (words.length <= 3) return [sentence];
+    return splitOne(sentence);
   };
 
   const [options] = useState(() => shuffle(getChunks(shuffledItems[0]?.English || "").map((c, i) => ({ id: i, text: c }))));

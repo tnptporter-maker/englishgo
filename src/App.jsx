@@ -121,7 +121,7 @@ const splitIntoChunks = async (sentence) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514", max_tokens: 300,
-        messages: [{ role: "user", content: `Split this English text into 3-6 meaningful chunks for language learning. CRITICAL RULES: 1) Never split across sentence boundaries - if there are multiple sentences, each sentence must be its own chunk or combined with adjacent words before it, never split mid-sentence. 2) A period, question mark, or exclamation mark must always stay at the END of a chunk, never at the START. 3) Return ONLY a JSON array of strings, no explanation.\nText: "${sentence}"` }]
+        messages: [{ role: "user", content: `Split this English text into exactly 3-4 meaningful phrase chunks for language learning. Each chunk should be 2-5 words. CRITICAL RULES: 1) Never split across sentence boundaries. 2) Punctuation (.?!,) must always stay at the END of a chunk, never at the START. 3) Return ONLY a JSON array of strings, no explanation.\nText: "${sentence}"` }]
       })
     });
     const data = await res.json();
@@ -129,7 +129,25 @@ const splitIntoChunks = async (sentence) => {
     const match = text.match(/\[.*\]/s);
     if (match) {
       const chunks = JSON.parse(match[0]);
-      if (Array.isArray(chunks) && chunks.length > 1) return chunks;
+      if (Array.isArray(chunks) && chunks.length > 1) {
+        // 1) 구두점 기준 분리
+        const fixed = [];
+        for (const chunk of chunks) {
+          const parts = chunk.split(/(?<=[.?!,])\s+/);
+          for (const part of parts) { if (part.trim()) fixed.push(part.trim()); }
+        }
+        const base = fixed.length > 1 ? fixed : chunks;
+        // 2) 1단어짜리 청크는 앞 청크에 합치기
+        const merged = [];
+        for (const chunk of base) {
+          if (merged.length > 0 && chunk.split(" ").length === 1 && !/[.?!,]$/.test(merged[merged.length - 1])) {
+            merged[merged.length - 1] += " " + chunk;
+          } else {
+            merged.push(chunk);
+          }
+        }
+        return merged;
+      }
     }
   } catch {}
   return sentence.split(" ").reduce((acc, w, i) => {
@@ -860,13 +878,12 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
         <Header title="문장 만들기" onQuit={() => go("home")} />
         <ProgressBar current={idx} total={shuffledItems.length} />
         <div style={{ ...S.card, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, color: C.sub, marginBottom: 8 }}>한국어</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{curItem.Korean}</div>
         </div>
-        <div style={{ minHeight: 56, border: `2px dashed ${result === true ? C.accent : result === false ? C.error : C.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", background: result === true ? C.accentLight : result === false ? C.errorBg : "#fff" }}>
+        <div style={{ minHeight: 56, border: `2px dashed ${result === true ? C.accent : result === false ? C.error : C.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", background: "#fff" }}>
           {selected.length === 0
             ? <span style={{ color: C.sub, fontSize: 13 }}>단어를 눌러 순서대로 선택하세요</span>
-            : <span style={{ color: C.sub, fontSize: 13 }}>{selected.map(s => s.text).join(" ")}</span>}
+            : <span style={{ color: C.sub, fontSize: 16 }}>{selected.map(s => s.text).join(" ")}</span>}
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
           {loading

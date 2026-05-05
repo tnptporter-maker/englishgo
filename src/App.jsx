@@ -623,7 +623,7 @@ function HomeScreen({ go, user, userData, setUserData, categories, sources, less
                 {/* 7번: 동그라미 하위학습 + 6번: 체크 표시 + 8번: Start 버튼 */}
                 {isSelected && (
                   <div style={{ background: C.primaryLight, borderRadius: "0 0 16px 16px", padding: "16px 16px 16px" }}>
-                    <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginBottom: 16 }}>
+                    <div style={{ display: "flex", gap: 12, overflowX: "auto", marginBottom: 16, paddingBottom: 4, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
                       {stepList.map((step) => {
                         const stepKey = step.id.replace("step", "").toLowerCase();
                         const isDoneStep = step.id === "stepQuiz" ? qp === "done" : sd[stepKey];
@@ -773,7 +773,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
-            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round === r ? "#EDE1D6" : C.borderLight, color: round === r ? "#000" : C.sub }}>
+            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round === r ? C.primary : "#fff", color: round === r ? "#fff" : C.sub, border: `1.5px solid ${round === r ? C.primary : C.border}` }}>
               {r}회차
             </div>
           ))}
@@ -786,14 +786,14 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
           <div style={{ fontSize: 18, fontWeight: 700, color: C.primaryDark, lineHeight: 1.5 }}>{curItem.English}</div>
         </div>
         <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-          <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#EDE1D6", color: "#000", fontWeight: 700, fontSize: 14 }}>🔊 듣기</button>
+          <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#fff", color: C.text, fontWeight: 700, fontSize: 14 }}>🔊 듣기</button>
           <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#B5C98A" : "#CCDA9C", color: "#4A5E2A", fontWeight: 700, fontSize: 14 }}>
             {listening ? "⏹ 중지" : "🎤 따라읽기"}
           </button>
         </div>
         {spokenText && <div style={{ ...S.card, fontSize: 13, color: C.sub, marginBottom: 12 }}>내 답 : {spokenText}</div>}
         {feedback && <div style={{ textAlign: "center", color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 12 }}>{feedback}</div>}
-        <button onClick={handleNext} style={{ ...S.btn, background: C.accent, color: "#fff" }}>
+        <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>
           {idx + 1 < total ? "다음" : round < totalRounds ? "2회차 시작" : "완료! 문장 만들기"}
         </button>
       </div>

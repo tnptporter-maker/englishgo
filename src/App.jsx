@@ -952,7 +952,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
 
 function StepVideoScreen({ go, nav, lessons, setUserData }) {
   const { lessonId, sourceId } = nav;
-  const lesson = lessons.find((l) => l.LessonID === lessonId);
+  const lesson = lessons.find((l) => l.LessonID === lessonId && l.SourceID === sourceId);
   const videoId = lesson?.VideoURL?.match(/(?:youtu\.be\/|v=)([^&\s]+)/)?.[1];
   const handleNext = () => {
     setUserData((prev) => {
@@ -978,7 +978,7 @@ function StepVideoScreen({ go, nav, lessons, setUserData }) {
 
 function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
   const { lessonId, sourceId } = nav;
-  const lesson = lessons.find((l) => l.LessonID === lessonId);
+  const lesson = lessons.find((l) => l.LessonID === lessonId && l.SourceID === sourceId);
   const source = sources.find((s) => s.SourceID === sourceId);
   const key = `${lessonId}_${sourceId}`;
   const [content, setContent] = useState("");
@@ -1284,7 +1284,7 @@ function ScriptSourceScreen({ go, nav, sources, lessons, items }) {
 
 function ScriptDetailScreen({ go, nav, lessons, sources, items, userData, setUserData }) {
   const { lessonId, sourceId } = nav;
-  const lesson = lessons.find((l) => l.LessonID === lessonId);
+  const lesson = lessons.find((l) => l.LessonID === lessonId && l.SourceID === sourceId);
   const source = sources.find((s) => s.SourceID === sourceId);
   const lessonItems = items.filter((it) => it.LessonID === lessonId && it.SourceID === sourceId).sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0));
   const { favorites = {} } = userData;

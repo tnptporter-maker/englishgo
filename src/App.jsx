@@ -122,6 +122,7 @@ const fetchBlanks = async (sentence) => {
       body: JSON.stringify({ sentence }),
     });
     const data = await res.json();
+    console.log("blanks response:", JSON.stringify(data));
     if (Array.isArray(data.blanks) && data.blanks.length > 0) return data.blanks;
   } catch {}
   return [];
@@ -844,7 +845,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
     if (!allFilled) return;
     let reconstructed = curItem.English;
     blanks.forEach((blank, i) => {
-      reconstructed = reconstructed.replace(`__BLANK${i}__`, (userInputs[i] || "").trim());
+      reconstructed = reconstructed.replace(blank, (userInputs[i] || "").trim());
     });
     setResult(checkCorrect(curItem.English, reconstructed));
   };

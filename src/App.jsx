@@ -121,7 +121,7 @@ const splitIntoChunks = async (sentence) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514", max_tokens: 300,
-        messages: [{ role: "user", content: `Split this single English sentence into 3-6 meaningful phrase chunks for language learning. Each chunk must be part of ONLY this one sentence. Return ONLY a JSON array of strings, no explanation, no extra sentences.\nSentence: "${sentence}"` }]
+        messages: [{ role: "user", content: `Split this English text into 3-6 meaningful chunks for language learning. CRITICAL RULES: 1) Never split across sentence boundaries - if there are multiple sentences, each sentence must be its own chunk or combined with adjacent words before it, never split mid-sentence. 2) A period, question mark, or exclamation mark must always stay at the END of a chunk, never at the START. 3) Return ONLY a JSON array of strings, no explanation.\nText: "${sentence}"` }]
       })
     });
     const data = await res.json();
@@ -507,14 +507,13 @@ function HomeScreen({ go, user, userData, setUserData, categories, sources, less
     const sd = userData.stepDone?.[key] || {};
     const stepList = getStepList(l);
 
-    // 9번: 진행중이면 이어하기 모달
+    // 진행중이면 바로 이어하기로 이동
     if (qp && qp !== "done") {
       let resumeScreen = "stepRead";
       if (qp.startsWith("preview_")) resumeScreen = "stepRead";
       else if (qp.startsWith("build_")) resumeScreen = "stepBuild";
       else resumeScreen = "stepQuiz";
-      setResumeTarget({ lessonId: l.LessonID, sourceId: l.SourceID, screen: resumeScreen, key });
-      setResumeModal(true);
+      go(resumeScreen, { lessonId: l.LessonID, sourceId: l.SourceID, resume: true });
       return;
     }
 
@@ -787,7 +786,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         </div>
         <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
           <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#fff", color: C.text, fontWeight: 700, fontSize: 14 }}>🔊 듣기</button>
-          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#B5C98A" : "#CCDA9C", color: "#4A5E2A", fontWeight: 700, fontSize: 14 }}>
+          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#A8D84E" : "#CCFF66", color: "#4A5E2A", fontWeight: 700, fontSize: 14 }}>
             {listening ? "⏹ 중지" : "🎤 따라읽기"}
           </button>
         </div>
@@ -882,7 +881,10 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
         </div>
         {result !== null && <ResultCard correct={result} english={curItem.English} />}
         {result === null
-          ? <button onClick={handleSubmit} disabled={selected.length === 0} style={{ ...S.btn, ...S.btnPrimary, marginTop: 12, opacity: selected.length === 0 ? 0.5 : 1 }}>제출</button>
+          ? <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              <button onClick={() => { setSelected([]); }} style={{ ...S.btn, ...S.btnGhost, flex: 1 }}>초기화</button>
+              <button onClick={handleSubmit} disabled={selected.length === 0} style={{ ...S.btn, ...S.btnPrimary, flex: 1, opacity: selected.length === 0 ? 0.5 : 1 }}>제출</button>
+            </div>
           : <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary, marginTop: 12 }}>{idx + 1 < shuffledItems.length ? "다음" : "Speaking Test"}</button>}
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
@@ -1296,7 +1298,7 @@ function ScriptDetailScreen({ go, nav, lessons, sources, items, userData, setUse
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title={lesson?.Title} onHome={() => go("home")} />
+        <Header title={lesson?.Title} onBack={() => nav.fromHome ? go("home") : go("scriptSource", { sourceId })} />
         <div style={{ fontSize: 12, color: C.sub, marginBottom: 20 }}>{source?.Name}</div>
         {lessonItems.map((item) => (
           <div key={item.ItemID} style={{ ...S.card, marginBottom: 12 }}>

@@ -815,7 +815,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
 
   const getChunks = (sentence) => {
     const CONJUNCTIONS = /^(and|but|or|so|because|until|when|while|if|before|after|though|although|unless|that|which|who)$/i;
-    const PREPOSITIONS = /^(for|in|on|at|to|of|with|by|from|about|as|into|through|during|a|an|the)$/i;
+    const PREPOSITIONS = /^(for|in|on|at|of|with|by|from|about|into|through|during|a|an|the)$/i;
     const words = sentence.split(" ");
 
     // 각 문장을 접속사/전치사 기준으로 쪼개는 내부 함수
@@ -847,7 +847,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
     };
 
     // 구두점 기준으로 먼저 문장 분리
-    const punctChunks = sentence.split(/(?<=[.?!])\s+/).filter(s => s.trim());
+    const punctChunks = sentence.split(/(?<=[.?!,])\s+/).filter(s => s.trim());
     if (punctChunks.length > 1) {
       // 각 문장도 추가로 쪼개기
       const all = [];
@@ -866,7 +866,12 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
     if (curItem) { setSelected([]); setResult(null); setChunkOptions(shuffle(getChunks(curItem.English).map((c, i) => ({ id: i, text: c })))); }
   }, [idx]);
   useEffect(() => {
-    setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: `build_${idx}` } }));
+    setUserData((prev) => {
+      const cur = prev.quizProgress[key];
+      // 따라읽기 진도(preview_)가 있으면 덮어쓰지 않음
+      if (cur && cur.startsWith("preview_")) return prev;
+      return { ...prev, quizProgress: { ...prev.quizProgress, [key]: `build_${idx}` } };
+    });
   }, [idx]);
 
   const handleSelect = (opt) => { if (result !== null) return; if (selected.find(s => s.id === opt.id)) return; setSelected((prev) => [...prev, opt]); };

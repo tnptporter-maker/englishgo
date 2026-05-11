@@ -202,7 +202,7 @@ function useMic(onResult) {
     };
 
     rec.onend = () => {
-      console.log("[MIC] onend, active:", activeRef.current);
+      console.log("[MIC] onend, active:", activeRef.current, "| accumulated:", accumulatedRef.current);
       if (activeRef.current) scheduleRestart(SR);
       else setListening(false);
     };
@@ -226,6 +226,7 @@ function useMic(onResult) {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return alert("Chrome 브라우저를 사용해주세요.");
     stopSpeak();
+    console.log("[MIC] startMic called - resetting accumulated");
     activeRef.current = true;
     accumulatedRef.current = "";
     try {

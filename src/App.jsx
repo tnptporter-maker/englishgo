@@ -131,17 +131,7 @@ const fetchSheet = async (sheetName) => {
   );
 };
 
-const fetchBlanks = (sentence) => {
-  const words = sentence.split(" ");
-  const total = words.length;
-  if (total <= 3) return [sentence];
-  const size = Math.ceil(total / 3);
-  const chunks = [];
-  for (let i = 0; i < total; i += size) {
-    chunks.push(words.slice(i, i + size).join(" "));
-  }
-  return chunks;
-};
+
 
 
 const DEFAULT_DATA = { progress: {}, studyDays: [], quizProgress: {}, favorites: {}, diaries: [], stepDone: {} };
@@ -156,22 +146,43 @@ function useMic(onResult) {
   const restartRef = useRef(null);
   const activeRef = useRef(false);
   const accumulatedRef = useRef("");
+  const onResultRef = useRef(onResult);
+  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
 
   const stopMic = useCallback(() => {
     activeRef.current = false;
     clearTimeout(restartRef.current);
     try { recRef.current?.stop(); } catch {}
+    try { recRef.current?.abort(); } catch {}
+    recRef.current = null;
     setListening(false);
     accumulatedRef.current = "";
   }, []);
 
-  const onResultRef = useRef(onResult);
-  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
+  const scheduleRestart = useCallback((SR, delay = 100) => {
+    if (!activeRef.current) return;
+    clearTimeout(restartRef.current);
+    restartRef.current = setTimeout(() => {
+      if (!activeRef.current) return;
+      try {
+        const newRec = createRec(SR);
+        recRef.current = newRec;
+        newRec.start();
+      } catch {
+        // 이미 start 된 경우 등 — 짧게 재시도
+        if (activeRef.current) scheduleRestart(SR, 300);
+      }
+    }, delay);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const startNewRec = useCallback((SR) => {
+  const createRec = useCallback((SR) => {
     const rec = new SR();
-    rec.lang = "en-US"; rec.continuous = true; rec.interimResults = false;
+    rec.lang = "en-US";
+    rec.continuous = true;
+    rec.interimResults = false;
     let lastIdx = 0;
+
     rec.onresult = (e) => {
       let final = "";
       for (let i = lastIdx; i < e.results.length; i++) {
@@ -180,39 +191,33 @@ function useMic(onResult) {
           lastIdx = i + 1;
         }
       }
-      if (final.trim()) {
-        accumulatedRef.current += (accumulatedRef.current ? " " : "") + final.trim();
+      const trimmed = final.trim();
+      if (trimmed) {
+        accumulatedRef.current = accumulatedRef.current
+          ? accumulatedRef.current + " " + trimmed
+          : trimmed;
         onResultRef.current(accumulatedRef.current);
       }
     };
+
     rec.onend = () => {
-      if (activeRef.current) {
-        restartRef.current = setTimeout(() => {
-          try {
-            const newRec = startNewRec(SR);
-            recRef.current = newRec;
-            newRec.start();
-          } catch {}
-        }, 200);
-      } else {
-        setListening(false);
-      }
+      if (activeRef.current) scheduleRestart(SR);
+      else setListening(false);
     };
+
     rec.onerror = (err) => {
-      if (["no-speech", "audio-capture", "network"].includes(err.error)) {
-        if (activeRef.current) {
-          restartRef.current = setTimeout(() => {
-            try {
-              const newRec = startNewRec(SR);
-              recRef.current = newRec;
-              newRec.start();
-            } catch {}
-          }, 200);
-        }
+      // 권한 거부/중단(aborted)은 재시작 불가 — 종료
+      if (err.error === "not-allowed" || err.error === "service-not-allowed") {
+        activeRef.current = false;
+        setListening(false);
+        return;
       }
+      // 그 외 (no-speech, audio-capture, network, aborted 등) 모두 재시작
+      if (activeRef.current) scheduleRestart(SR);
     };
+
     return rec;
-  }, []);
+  }, [scheduleRestart]);
 
   const startMic = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -221,12 +226,14 @@ function useMic(onResult) {
     activeRef.current = true;
     accumulatedRef.current = "";
     try {
-      const rec = startNewRec(SR);
+      const rec = createRec(SR);
       recRef.current = rec;
       rec.start();
       setListening(true);
-    } catch {}
-  }, [startNewRec]);
+    } catch {
+      activeRef.current = false;
+    }
+  }, [createRec]);
 
   useEffect(() => () => stopMic(), [stopMic]);
   return { listening, startMic, stopMic };
@@ -395,9 +402,7 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
   );
 }
 
-function QuizCore({ rawItems, onResult, onDone }) {
-  return <QuizCoreWithIdx rawItems={rawItems} onResult={onResult} onDone={onDone} />;
-}
+
 
 function LoginScreen() {
   const [loading, setLoading] = useState(false);
@@ -429,7 +434,12 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
 
   const { studyDays = [], quizProgress = {} } = userData;
 
-  const activeSourceId = selectedSourceId || (sources.length > 0 ? [...sources].sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0))[0]?.SourceID : null);
+  const activeSourceId = (() => {
+    if (selectedSourceId && sources.some(s => s.SourceID === selectedSourceId)) return selectedSourceId;
+    const savedId = localStorage.getItem("lastSourceId");
+    if (savedId && sources.some(s => s.SourceID === savedId)) return savedId;
+    return sources.length > 0 ? [...sources].sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0))[0]?.SourceID : null;
+  })();
 
   const sortedLessons = (() => {
     if (!activeSourceId) return [];
@@ -462,15 +472,13 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
     return sortedLessons[0];
   })();
 
-  // 코스 바뀌거나 앱 열면 레슨 자동 선택
+  // 코스 바뀌거나 앱 열면 마지막 학습 레슨 자동 선택
   useEffect(() => {
     if (!sortedLessons.length) return;
     const lastId = nav.lastLessonId || localStorage.getItem("lastLessonId");
-    const target = lastId
-      ? sortedLessons.find(l => l.LessonID === lastId) || todayLesson
-      : todayLesson;
+    const target = (lastId && sortedLessons.find(l => l.LessonID === lastId)) || todayLesson;
     setSelectedLesson(target || sortedLessons[0] || null);
-  }, [selectedSourceId, activeSourceId]);
+  }, [activeSourceId, sortedLessons.length]);
 
   // 레슨 선택 시 해당 레슨으로 스크롤 (13번)
   useEffect(() => {
@@ -791,7 +799,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="따라읽기" onQuit={() => { stopMic(); stopSpeak(); localStorage.setItem("lastLessonId", lessonId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId }); }} />
+        <Header title="따라읽기" onQuit={() => { stopMic(); stopSpeak(); localStorage.setItem("lastLessonId", lessonId); localStorage.setItem("lastSourceId", sourceId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId, lastSourceId: sourceId }); }} />
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
@@ -840,7 +848,6 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   const [idx, setIdx] = useState(resume ? savedIdx : 0);
   const [selected, setSelected] = useState([]);
   const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
   const curItem = shuffledItems[idx];
 
   useEffect(() => { if (resume && savedIdx > 0) setResumeModal(true); }, []);
@@ -893,7 +900,6 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
     return splitOne(sentence);
   };
 
-  const [options] = useState(() => shuffle(getChunks(shuffledItems[0]?.English || "").map((c, i) => ({ id: i, text: c }))));
   const [chunkOptions, setChunkOptions] = useState(() => shuffle(getChunks(curItem?.English || "").map((c, i) => ({ id: i, text: c }))));
 
   useEffect(() => {
@@ -929,7 +935,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="문장 만들기" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId }); }} />
+        <Header title="문장 만들기" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); localStorage.setItem("lastSourceId", sourceId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId, lastSourceId: sourceId }); }} />
         <ProgressBar current={idx} total={shuffledItems.length} />
         <div style={{ ...S.card, marginBottom: 16 }}>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{curItem.Korean}</div>
@@ -1011,7 +1017,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="Speaking Test" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId }); }} />
+        <Header title="Speaking Test" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); localStorage.setItem("lastSourceId", sourceId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId, lastSourceId: sourceId }); }} />
         <QuizCoreWithIdx rawItems={lessonItems} initIdx={startIdx}
           onResult={handleResult}
           onIdxChange={(i) => setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: String(i) } }))}
@@ -1115,7 +1121,7 @@ function ReviewTab({ userData, setUserData, items, go }) {
     <div style={S.page}>
       <div style={S.inner}>
         <Header title="오늘의 복습" onQuit={() => go("home")} />
-        <QuizCore rawItems={reviewItems} onResult={handleResult} onDone={() => setDone(true)} />
+        <QuizCoreWithIdx rawItems={reviewItems} onResult={handleResult} onDone={() => setDone(true)} />
       </div>
     </div>
   );
@@ -1153,7 +1159,7 @@ function LikeTab({ userData, setUserData, items }) {
       <div style={S.page}>
         <div style={S.inner}>
           <Header title="저장 문장 퀴즈" onQuit={() => setQuizMode(false)} />
-          <QuizCore rawItems={favItems} onResult={handleResult} onDone={() => setDone(true)} />
+          <QuizCoreWithIdx rawItems={favItems} onResult={handleResult} onDone={() => setDone(true)} />
         </div>
       </div>
     );
@@ -1397,7 +1403,11 @@ export default function App() {
   const [lessons, setLessons] = useState([]);
   const [items, setItems] = useState([]);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [selectedSourceId, setSelectedSourceId] = useState(null);
+  const [selectedSourceId, setSelectedSourceIdRaw] = useState(() => localStorage.getItem("lastSourceId") || null);
+  const setSelectedSourceId = useCallback((id) => {
+    setSelectedSourceIdRaw(id);
+    if (id) localStorage.setItem("lastSourceId", id);
+  }, []);
   const pendingSave = useRef(null);
   const saveTimer = useRef(null);
 

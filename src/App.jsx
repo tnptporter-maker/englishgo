@@ -426,6 +426,10 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
 
   const activeSourceId = selectedSourceId || (sources.length > 0 ? [...sources].sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0))[0]?.SourceID : null);
 
+  useEffect(() => {
+    setSelectedLesson(null);
+  }, [selectedSourceId]);
+
   const sortedLessons = (() => {
     if (!activeSourceId) return [];
     return lessons

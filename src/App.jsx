@@ -428,10 +428,6 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
 
   const activeSourceId = selectedSourceId || (sources.length > 0 ? [...sources].sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0))[0]?.SourceID : null);
 
-  useEffect(() => {
-    setSelectedLesson(null);
-  }, [selectedSourceId]);
-
   const sortedLessons = (() => {
     if (!activeSourceId) return [];
     return lessons
@@ -463,20 +459,15 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
     return sortedLessons[0];
   })();
 
-  // 앱 열면 todayLesson 자동 선택, 방금 학습한 레슨 있으면 그걸로
+  // 코스 바뀌거나 앱 열면 레슨 자동 선택
   useEffect(() => {
-    if (!selectedLesson && todayLesson) {
-      setSelectedLesson(todayLesson);
-      return;
-    }
-    if (!selectedLesson) {
-      const lastId = nav.lastLessonId || localStorage.getItem("lastLessonId");
-      const target = lastId
-        ? sortedLessons.find(l => l.LessonID === lastId) || todayLesson
-        : todayLesson;
-      if (target) setSelectedLesson(target);
-    }
-  }, [todayLesson, selectedSourceId]);
+    if (!sortedLessons.length) return;
+    const lastId = nav.lastLessonId || localStorage.getItem("lastLessonId");
+    const target = lastId
+      ? sortedLessons.find(l => l.LessonID === lastId) || todayLesson
+      : todayLesson;
+    setSelectedLesson(target || sortedLessons[0] || null);
+  }, [selectedSourceId, activeSourceId]);
 
   // 레슨 선택 시 해당 레슨으로 스크롤 (13번)
   useEffect(() => {
@@ -708,7 +699,7 @@ function CourseSelectScreen({ go, categories, sources, lessons, setSelectedSourc
             <div style={{ fontSize: 17, fontWeight: 700, color: C.done, marginBottom: 8 }}>{cat.Name}</div>
             {srcs.map((src) => (
               <div key={src.SourceID}
-                onClick={() => { setSelectedSourceId(src.SourceID); go("home", { resetLesson: true }); }}
+                onClick={() => { setSelectedSourceId(src.SourceID); go("home"); }}
                 style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left" }}>{src.Name}</div>

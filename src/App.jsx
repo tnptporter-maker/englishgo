@@ -168,11 +168,13 @@ function useMic(onResult) {
   const startNewRec = useCallback((SR) => {
     const rec = new SR();
     rec.lang = "en-US"; rec.continuous = true; rec.interimResults = false;
+    let lastIdx = 0;
     rec.onresult = (e) => {
       let final = "";
-      for (let i = 0; i < e.results.length; i++) {
+      for (let i = lastIdx; i < e.results.length; i++) {
         if (e.results[i].isFinal) {
           final += e.results[i][0].transcript + " ";
+          lastIdx = i + 1;
         }
       }
       if (final.trim()) {
@@ -463,8 +465,8 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
 
   // 앱 열면 todayLesson 자동 선택, 방금 학습한 레슨 있으면 그걸로
   useEffect(() => {
-    if (nav.resetLesson) {
-      setSelectedLesson(todayLesson || null);
+    if (!selectedLesson && todayLesson) {
+      setSelectedLesson(todayLesson);
       return;
     }
     if (!selectedLesson) {
@@ -474,7 +476,7 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
         : todayLesson;
       if (target) setSelectedLesson(target);
     }
-  }, [todayLesson, nav.resetLesson]);
+  }, [todayLesson, selectedSourceId]);
 
   // 레슨 선택 시 해당 레슨으로 스크롤 (13번)
   useEffect(() => {

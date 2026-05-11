@@ -1404,10 +1404,6 @@ export default function App() {
   const [items, setItems] = useState([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [selectedSourceId, setSelectedSourceIdRaw] = useState(null);
-  const setSelectedSourceId = useCallback((id) => {
-    setSelectedSourceIdRaw(id);
-    if (id) setUserData((prev) => ({ ...prev, lastSourceId: id }));
-  }, [setUserData]);
   const pendingSave = useRef(null);
   const saveTimer = useRef(null);
 
@@ -1436,6 +1432,11 @@ export default function App() {
       return next;
     });
   }, [user]);
+
+  const setSelectedSourceId = useCallback((id) => {
+    setSelectedSourceIdRaw(id);
+    if (id) setUserData((prev) => ({ ...prev, lastSourceId: id }));
+  }, [setUserData]);
 
   useEffect(() => {
     const handleBackButton = (e) => {

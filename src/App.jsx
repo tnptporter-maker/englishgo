@@ -461,6 +461,7 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
   useEffect(() => {
     if (nav.resetLesson) {
       setSelectedLesson(null);
+      if (todayLesson) setSelectedLesson(todayLesson);
       return;
     }
     if (!selectedLesson) {
@@ -791,7 +792,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="따라읽기" onQuit={() => { stopMic(); stopSpeak(); localStorage.setItem("lastLessonId", lessonId); go("home", { lastLessonId: lessonId }); }} />
+        <Header title="따라읽기" onQuit={() => { stopMic(); stopSpeak(); localStorage.setItem("lastLessonId", lessonId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId }); }} />
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
@@ -929,7 +930,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="문장 만들기" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); go("home", { lastLessonId: lessonId }); }} />
+        <Header title="문장 만들기" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId }); }} />
         <ProgressBar current={idx} total={shuffledItems.length} />
         <div style={{ ...S.card, marginBottom: 16 }}>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{curItem.Korean}</div>
@@ -1011,7 +1012,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="Speaking Test" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); go("home", { lastLessonId: lessonId }); }} />
+        <Header title="Speaking Test" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId }); }} />
         <QuizCoreWithIdx rawItems={lessonItems} initIdx={startIdx}
           onResult={handleResult}
           onIdxChange={(i) => setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: String(i) } }))}

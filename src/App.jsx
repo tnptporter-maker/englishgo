@@ -195,19 +195,16 @@ function useMic(onResult) {
         accumulatedRef.current = accumulatedRef.current
           ? accumulatedRef.current + " " + trimmed
           : trimmed;
-        console.log("[MIC] new chunk:", trimmed, "| total:", accumulatedRef.current);
         onResultRef.current(accumulatedRef.current);
       }
     };
 
     rec.onend = () => {
-      console.log("[MIC] onend, active:", activeRef.current, "| accumulated:", accumulatedRef.current);
       if (activeRef.current) scheduleRestart(SR);
       else setListening(false);
     };
 
     rec.onerror = (err) => {
-      console.log("[MIC] onerror:", err.error);
       // 권한 거부/중단(aborted)은 재시작 불가 — 종료
       if (err.error === "not-allowed" || err.error === "service-not-allowed") {
         activeRef.current = false;
@@ -225,7 +222,6 @@ function useMic(onResult) {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return alert("Chrome 브라우저를 사용해주세요.");
     stopSpeak();
-    console.log("[MIC] startMic called - resetting accumulated");
     activeRef.current = true;
     accumulatedRef.current = "";
     try {

@@ -436,7 +436,7 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
 
   const activeSourceId = (() => {
     if (selectedSourceId && sources.some(s => s.SourceID === selectedSourceId)) return selectedSourceId;
-    const savedId = localStorage.getItem("lastSourceId");
+    const savedId = userData.lastSourceId;
     if (savedId && sources.some(s => s.SourceID === savedId)) return savedId;
     return sources.length > 0 ? [...sources].sort((a, b) => Number(a.Order || 0) - Number(b.Order || 0))[0]?.SourceID : null;
   })();
@@ -475,7 +475,7 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
   // 코스 바뀌거나 앱 열면 마지막 학습 레슨 자동 선택
   useEffect(() => {
     if (!sortedLessons.length) return;
-    const lastId = nav.lastLessonId || localStorage.getItem("lastLessonId");
+    const lastId = nav.lastLessonId || userData.lastLessonId;
     const target = (lastId && sortedLessons.find(l => l.LessonID === lastId)) || todayLesson;
     setSelectedLesson(target || sortedLessons[0] || null);
   }, [activeSourceId, sortedLessons.length]);
@@ -799,7 +799,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="따라읽기" onQuit={() => { stopMic(); stopSpeak(); localStorage.setItem("lastLessonId", lessonId); localStorage.setItem("lastSourceId", sourceId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId, lastSourceId: sourceId }); }} />
+        <Header title="따라읽기" onQuit={() => { stopMic(); stopSpeak(); setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }} />
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
@@ -935,7 +935,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="문장 만들기" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); localStorage.setItem("lastSourceId", sourceId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId, lastSourceId: sourceId }); }} />
+        <Header title="문장 만들기" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }} />
         <ProgressBar current={idx} total={shuffledItems.length} />
         <div style={{ ...S.card, marginBottom: 16 }}>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{curItem.Korean}</div>
@@ -1017,7 +1017,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="Speaking Test" onQuit={() => { localStorage.setItem("lastLessonId", lessonId); localStorage.setItem("lastSourceId", sourceId); setUserData((prev) => ({ ...prev, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home", { lastLessonId: lessonId, lastSourceId: sourceId }); }} />
+        <Header title="Speaking Test" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }} />
         <QuizCoreWithIdx rawItems={lessonItems} initIdx={startIdx}
           onResult={handleResult}
           onIdxChange={(i) => setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: String(i) } }))}
@@ -1403,11 +1403,11 @@ export default function App() {
   const [lessons, setLessons] = useState([]);
   const [items, setItems] = useState([]);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [selectedSourceId, setSelectedSourceIdRaw] = useState(() => localStorage.getItem("lastSourceId") || null);
+  const [selectedSourceId, setSelectedSourceIdRaw] = useState(null);
   const setSelectedSourceId = useCallback((id) => {
     setSelectedSourceIdRaw(id);
-    if (id) localStorage.setItem("lastSourceId", id);
-  }, []);
+    if (id) setUserData((prev) => ({ ...prev, lastSourceId: id }));
+  }, [setUserData]);
   const pendingSave = useRef(null);
   const saveTimer = useRef(null);
 

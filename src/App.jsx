@@ -165,6 +165,9 @@ function useMic(onResult) {
     accumulatedRef.current = "";
   }, []);
 
+  const onResultRef = useRef(onResult);
+  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
+
   const startNewRec = useCallback((SR) => {
     const rec = new SR();
     rec.lang = "en-US"; rec.continuous = true; rec.interimResults = false;
@@ -179,7 +182,7 @@ function useMic(onResult) {
       }
       if (final.trim()) {
         accumulatedRef.current += (accumulatedRef.current ? " " : "") + final.trim();
-        onResult(accumulatedRef.current);
+        onResultRef.current(accumulatedRef.current);
       }
     };
     rec.onend = () => {
@@ -209,7 +212,7 @@ function useMic(onResult) {
       }
     };
     return rec;
-  }, [onResult]);
+  }, []);
 
   const startMic = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;

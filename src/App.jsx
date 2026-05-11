@@ -459,6 +459,10 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
 
   // 앱 열면 todayLesson 자동 선택, 방금 학습한 레슨 있으면 그걸로
   useEffect(() => {
+    if (nav.resetLesson) {
+      setSelectedLesson(null);
+      return;
+    }
     if (!selectedLesson) {
       const lastId = nav.lastLessonId || localStorage.getItem("lastLessonId");
       const target = lastId
@@ -466,7 +470,7 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
         : todayLesson;
       if (target) setSelectedLesson(target);
     }
-  }, [todayLesson]);
+  }, [todayLesson, nav.resetLesson]);
 
   // 레슨 선택 시 해당 레슨으로 스크롤 (13번)
   useEffect(() => {
@@ -698,7 +702,7 @@ function CourseSelectScreen({ go, categories, sources, lessons, setSelectedSourc
             <div style={{ fontSize: 17, fontWeight: 700, color: C.done, marginBottom: 8 }}>{cat.Name}</div>
             {srcs.map((src) => (
               <div key={src.SourceID}
-                onClick={() => { setSelectedSourceId(src.SourceID); go("home"); }}
+                onClick={() => { setSelectedSourceId(src.SourceID); go("home", { resetLesson: true }); }}
                 style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left" }}>{src.Name}</div>
@@ -1422,6 +1426,16 @@ export default function App() {
       return next;
     });
   }, [user]);
+
+  useEffect(() => {
+    const handleBackButton = (e) => {
+      e.preventDefault();
+      window.history.pushState(null, "", window.location.pathname);
+    };
+    window.history.pushState(null, "", window.location.pathname);
+    window.addEventListener("popstate", handleBackButton);
+    return () => window.removeEventListener("popstate", handleBackButton);
+  }, []);
 
   const go = useCallback((s, n = {}) => {
     const tabScreens = ["home", "review", "like", "diary", "script"];

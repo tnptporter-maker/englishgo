@@ -156,7 +156,6 @@ function useMic(onResult) {
     try { recRef.current?.abort(); } catch {}
     recRef.current = null;
     setListening(false);
-    accumulatedRef.current = "";
   }, []);
 
   const scheduleRestart = useCallback((SR, delay = 100) => {

@@ -460,8 +460,7 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
   // 앱 열면 todayLesson 자동 선택, 방금 학습한 레슨 있으면 그걸로
   useEffect(() => {
     if (nav.resetLesson) {
-      setSelectedLesson(null);
-      if (todayLesson) setSelectedLesson(todayLesson);
+      setSelectedLesson(todayLesson || null);
       return;
     }
     if (!selectedLesson) {

@@ -180,10 +180,10 @@ const getItemChunks = (item) => {
 };
 // 학습화면에서 바로 메모를 추가할 때 쓰는 공용 함수
 // front: 카드 앞면(문장/레슨명), back: 사용자가 적은 메모(카드 뒷면), context: 어느 학습단계에서 적었는지 태그
-const addQuickMemo = (setUserData, front, back, context) => {
+const addQuickMemo = (setUserData, front, back) => {
   setUserData((prev) => ({
     ...prev,
-    memos: [{ id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: front || "", back: back || "", context: context || "", createdAt: today() }, ...(prev.memos || [])],
+    memos: [{ id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: front || "", back: back || "", createdAt: today() }, ...(prev.memos || [])],
   }));
 };
 const calcNextReview = (level) => {
@@ -404,25 +404,29 @@ function Header({ title, onBack, onQuit, onHome, onMemo }) {
   );
 }
 
-function MemoQuickSheet({ visible, tagLabel, onClose, onSave }) {
-  const [text, setText] = useState("");
-  useEffect(() => { if (visible) setText(""); }, [visible]);
+function MemoQuickSheet({ visible, onClose, onSave }) {
+  const [front, setFront] = useState("");
+  const [back, setBack] = useState("");
+  useEffect(() => { if (visible) { setFront(""); setBack(""); } }, [visible]);
   if (!visible) return null;
   const handleSave = () => {
-    if (!text.trim()) return;
-    onSave(text.trim());
+    if (!front.trim()) return;
+    onSave(front.trim(), back.trim());
   };
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "22px 22px 28px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 32px rgba(0,0,0,0.15)" }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: C.border, margin: "0 auto 18px" }} />
-        <div style={{ fontWeight: 800, fontSize: 16, color: C.text, marginBottom: tagLabel ? 6 : 14 }}>📝 메모하기</div>
-        {tagLabel && <div style={{ fontSize: 12, color: C.sub, marginBottom: 14 }}>{tagLabel}</div>}
-        <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="지금 생각난 걸 자유롭게 적어보세요 (예: in/at 차이, these days vs nowadays...)"
-          style={{ ...S.input, minHeight: 100, marginBottom: 14, display: "block" }} />
+        <div style={{ fontWeight: 800, fontSize: 16, color: C.text, marginBottom: 14 }}>📝 메모하기</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: C.primary, marginBottom: 6 }}>앞면 · 제목이나 키워드</div>
+        <input autoFocus value={front} onChange={(e) => setFront(e.target.value)} placeholder="예: in / at 차이"
+          style={{ ...S.input, marginBottom: 14, display: "block" }} />
+        <div style={{ fontSize: 12, fontWeight: 700, color: C.primary, marginBottom: 6 }}>뒷면 · 내용</div>
+        <textarea value={back} onChange={(e) => setBack(e.target.value)} placeholder="예: in은 넓은 장소, at은 구체적인 지점에 쓴다"
+          style={{ ...S.input, minHeight: 80, marginBottom: 14, display: "block" }} />
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{ ...S.btn, flex: 1, background: "#fff", color: C.sub, border: `1.5px solid ${C.border}` }}>취소</button>
-          <button onClick={handleSave} disabled={!text.trim()} style={{ ...S.btn, ...S.btnPrimary, flex: 1, opacity: text.trim() ? 1 : 0.5 }}>저장</button>
+          <button onClick={handleSave} disabled={!front.trim()} style={{ ...S.btn, ...S.btnPrimary, flex: 1, opacity: front.trim() ? 1 : 0.5 }}>저장</button>
         </div>
       </div>
     </div>
@@ -559,11 +563,13 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
   return (
     <div>
       <ProgressBar current={idx} total={shuffledItems.length} />
-      <div style={{ textAlign: "center", minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", marginBottom: 20 }}>
-        <button onClick={handleHint} disabled={submitted || hintCount >= hintChunks.length}
-          style={{ position: "absolute", top: 0, right: 0, width: 30, height: 30, borderRadius: "50%", border: "none", background: hintCount > 0 ? "#FFF7E0" : "transparent", fontSize: 16, cursor: hintCount >= hintChunks.length ? "default" : "pointer", opacity: submitted || hintCount >= hintChunks.length ? 0.4 : 1 }}>
-          💡
-        </button>
+      <div style={{ textAlign: "center", minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "flex-start", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+          <button onClick={handleHint} disabled={submitted || hintCount >= hintChunks.length}
+            style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: hintCount > 0 ? "#FFF7E0" : "transparent", fontSize: 16, cursor: hintCount >= hintChunks.length ? "default" : "pointer", opacity: submitted || hintCount >= hintChunks.length ? 0.4 : 1, flexShrink: 0 }}>
+            💡
+          </button>
+        </div>
         <div style={{ fontSize: 18, fontWeight: 700, color: C.text, lineHeight: 1.6 }}>{curItem.Korean}</div>
         {hintCount > 0 && (
           <div style={{ marginTop: 14, padding: "10px 12px", background: "#FFF7E0", borderRadius: 10, fontSize: 14, color: "#8A6200", fontWeight: 600, lineHeight: 1.6 }}>
@@ -623,7 +629,6 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
   const [resumeTarget, setResumeTarget] = useState(null);
   const lessonRefs = useRef({});
   const scrollRef = useRef(null);
-  const [scales, setScales] = useState({});
 
   const { studyDays = [], quizProgress = {} } = userData;
 
@@ -673,47 +678,14 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
     setSelectedLesson(target || sortedLessons[0] || null);
   }, [activeSourceId, sortedLessons.length]);
 
-  // 동그라미 원근법: 화면(스크롤 영역) 정중앙에 있는 동그라미가 제일 크고, 위/아래로 멀어질수록 작아지게
-  const updateScales = useCallback(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const containerCenter = rect.top + rect.height / 2;
-    const next = {};
-    sortedLessons.forEach((l) => {
-      const el = lessonRefs.current[l.LessonID];
-      if (!el) return;
-      const elRect = el.getBoundingClientRect();
-      const center = elRect.top + elRect.height / 2;
-      const dist = Math.abs(center - containerCenter);
-      const t = Math.min(1, dist / 260);
-      next[l.LessonID] = 1 - t * 0.42;
-    });
-    setScales(next);
-  }, [sortedLessons]);
-
   // 레슨 선택 시 해당 레슨을 화면 가운데로 스크롤 (13번)
   useEffect(() => {
     if (selectedLesson) {
       setTimeout(() => {
         lessonRefs.current[selectedLesson.LessonID]?.scrollIntoView({ behavior: "smooth", block: "center" });
-        updateScales();
       }, 100);
     }
   }, [selectedLesson]);
-
-  useEffect(() => {
-    updateScales();
-    const container = scrollRef.current;
-    if (!container) return;
-    let raf = null;
-    const onScroll = () => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => { updateScales(); raf = null; });
-    };
-    container.addEventListener("scroll", onScroll);
-    return () => container.removeEventListener("scroll", onScroll);
-  }, [updateScales]);
 
   const streakDays = (() => {
     if (!studyDays.length) return 0;
@@ -835,52 +807,66 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
           <div style={{ height: 1, background: C.border }} />
         </div>
 
-        {/* 레슨 리스트 (동그라미 스크롤 영역) */}
+        {/* 레슨 리스트 (타임라인 영역) */}
         <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "18px 20px 20px" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            {sortedLessons.map((l, i) => {
-              const key = `${l.LessonID}_${l.SourceID}`;
-              const qp = quizProgress[key];
-              const isDone = qp === "done";
-              const isInProgress = qp && qp !== "done";
-              const isSelected = selectedLesson?.LessonID === l.LessonID;
-              const sd = userData.stepDone?.[key] || {};
-              const stepList = getStepList(l);
-              const dayNum = i + 1;
-              const scale = scales[l.LessonID] ?? 1;
-              const size = Math.round(92 * scale);
+            {/* Day 1처럼 목록 맨 앞에 있는 항목도 화면 정중앙까지 스크롤될 수 있도록 위쪽 여백 확보 */}
+            <div style={{ height: 260, flexShrink: 0 }} />
+            <div style={{ position: "relative", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              {/* 안 고른 Day들을 이어주는 세로 선 */}
+              <div style={{ position: "absolute", top: 0, bottom: 0, left: "50%", width: 2, marginLeft: -1, background: "#E5E8EB", zIndex: 0 }} />
+              {sortedLessons.map((l, i) => {
+                const key = `${l.LessonID}_${l.SourceID}`;
+                const qp = quizProgress[key];
+                const isDone = qp === "done";
+                // 진행중이어도 다 파란색으로 칠하면 파란 동그라미가 너무 많아져서, "지금 이어서 할 그 하나"만 파란색으로 표시
+                const isCurrent = !isDone && todayLesson && l.LessonID === todayLesson.LessonID;
+                const isSelected = selectedLesson?.LessonID === l.LessonID;
+                const sd = userData.stepDone?.[key] || {};
+                const stepList = getStepList(l);
+                const dayNum = i + 1;
 
-              if (isSelected) {
+                if (isSelected) {
+                  return (
+                    <div key={l.LessonID} ref={(el) => { lessonRefs.current[l.LessonID] = el; }}
+                      style={{ position: "relative", zIndex: 1, width: "100%", padding: "6px 8px 26px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      <div onClick={() => setSelectedLesson(null)} style={{
+                        width: 52, height: 52, borderRadius: "50%", cursor: "pointer", flexShrink: 0,
+                        background: "#191F28", color: "#fff",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontWeight: 800, fontSize: 14, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif",
+                        boxShadow: "0 8px 18px rgba(0,0,0,0.2)", marginBottom: 16,
+                      }}>
+                        Day {dayNum}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, maxWidth: 320, padding: "0 4px" }}>
+                        <div style={{ width: 4, alignSelf: "stretch", borderRadius: 2, background: C.primary, flexShrink: 0 }} />
+                        <div style={{ fontSize: 18, fontWeight: 900, color: C.text, lineHeight: 1.35, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{l.Title}</div>
+                      </div>
+                      <StepCarousel stepList={stepList} qp={qp} sd={sd}
+                        onStepClick={(step) => go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID, resume: true })} />
+                    </div>
+                  );
+                }
+
                 return (
                   <div key={l.LessonID} ref={(el) => { lessonRefs.current[l.LessonID] = el; }}
-                    style={{ width: "100%", padding: "8px 8px 26px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                    <div onClick={() => setSelectedLesson(null)} style={{ textAlign: "center", cursor: "pointer", marginBottom: 16 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>Day {dayNum}</div>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginTop: 3, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{l.Title}</div>
-                    </div>
-                    <StepCarousel stepList={stepList} qp={qp} sd={sd}
-                      onStepClick={(step) => go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID, resume: true })} />
+                    onClick={() => setSelectedLesson(l)}
+                    style={{
+                      position: "relative", zIndex: 1,
+                      width: 30, height: 30, borderRadius: "50%", marginBottom: 18, cursor: "pointer", flexShrink: 0,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: isCurrent ? "#fff" : isDone ? "#DCF5E3" : "#E7E9EC",
+                      border: isCurrent ? `2.5px solid ${C.primary}` : "none",
+                      color: isCurrent ? C.primary : isDone ? "#1F9D55" : "#9AA4B0",
+                      fontWeight: 800, fontSize: 11,
+                      fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif",
+                    }}>
+                    {dayNum}
                   </div>
                 );
-              }
-
-              return (
-                <div key={l.LessonID} ref={(el) => { lessonRefs.current[l.LessonID] = el; }}
-                  onClick={() => setSelectedLesson(l)}
-                  style={{
-                    width: size, height: size, borderRadius: "50%", marginBottom: Math.round(16 * scale), cursor: "pointer",
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                    background: isInProgress ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : isDone ? "#DCF5E3" : "#E7E9EC",
-                    color: isInProgress ? "#fff" : isDone ? "#1F9D55" : "#9AA4B0",
-                    fontWeight: 800, fontSize: Math.max(11, Math.round(15 * scale)),
-                    fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif",
-                    boxShadow: isInProgress ? "0 10px 24px rgba(49,130,246,0.3)" : isDone ? "0 6px 14px rgba(34,197,94,0.15)" : "none",
-                  }}>
-                  Day {dayNum}
-                  {isDone && <span style={{ fontSize: 10, marginTop: 2 }}>✓</span>}
-                </div>
-              );
-            })}
+              })}
+            </div>
             {/* 13번: 마지막 레슨도 상단 스크롤 가능하도록 하단 여백 */}
             <div style={{ height: 300, flexShrink: 0 }} />
           </div>
@@ -946,7 +932,7 @@ function StepCarousel({ stepList, qp, sd, onStepClick }) {
 
   return (
     <div style={{ width: "100%" }}>
-      <div ref={scrollRef} style={{ display: "flex", overflowX: "auto", scrollSnapType: "x mandatory", gap: 16, padding: "0 calc(50% - 36px)", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+      <div ref={scrollRef} style={{ display: "flex", overflowX: "auto", overflowY: "visible", scrollSnapType: "x mandatory", gap: 16, padding: "10px calc(50% - 36px) 4px", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
         {stepList.map((step, i) => {
           const stepKey = step.id.replace("step", "").toLowerCase();
           const isDoneStep = step.id === "stepQuiz" ? qp === "done" : sd[stepKey];
@@ -965,7 +951,7 @@ function StepCarousel({ stepList, qp, sd, onStepClick }) {
               }}>
                 <StepIcon type={step.type} color={isActive ? "#fff" : (isDoneStep ? C.primaryDark : C.sub)} />
                 {isDoneStep && !isActive && (
-                  <div style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#22C55E", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ position: "absolute", top: -4, right: -4, width: 15, height: 15, borderRadius: "50%", background: "#22C55E", border: "2px solid #F2F4F6", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <span style={{ color: "#fff", fontSize: 8, fontWeight: 900 }}>✓</span>
                   </div>
                 )}
@@ -974,11 +960,6 @@ function StepCarousel({ stepList, qp, sd, onStepClick }) {
             </div>
           );
         })}
-      </div>
-      <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 14 }}>
-        {stepList.map((step, i) => (
-          <div key={step.id} style={{ width: i === active ? 14 : 5, height: 5, borderRadius: 3, background: i === active ? C.primary : "#D5DCE3", transition: "all 0.2s" }} />
-        ))}
       </div>
     </div>
   );
@@ -1128,8 +1109,8 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
-      <MemoQuickSheet visible={memoOpen} tagLabel="Repeat 화면에서" onClose={() => setMemoOpen(false)}
-        onSave={(text) => { addQuickMemo(setUserData, text, "", "Repeat"); setMemoOpen(false); }} />
+      <MemoQuickSheet visible={memoOpen} onClose={() => setMemoOpen(false)}
+        onSave={(front, back) => { addQuickMemo(setUserData, front, back); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1224,8 +1205,8 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
-      <MemoQuickSheet visible={memoOpen} tagLabel="Writing 화면에서" onClose={() => setMemoOpen(false)}
-        onSave={(text) => { addQuickMemo(setUserData, text, "", "Writing"); setMemoOpen(false); }} />
+      <MemoQuickSheet visible={memoOpen} onClose={() => setMemoOpen(false)}
+        onSave={(front, back) => { addQuickMemo(setUserData, front, back); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1289,8 +1270,8 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
-      <MemoQuickSheet visible={memoOpen} tagLabel="Speaking 화면에서" onClose={() => setMemoOpen(false)}
-        onSave={(text) => { addQuickMemo(setUserData, text, "", "Speaking"); setMemoOpen(false); }} />
+      <MemoQuickSheet visible={memoOpen} onClose={() => setMemoOpen(false)}
+        onSave={(front, back) => { addQuickMemo(setUserData, front, back); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1321,8 +1302,8 @@ function StepVideoScreen({ go, nav, lessons, setUserData }) {
         )}
         <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>다음</button>
       </div>
-      <MemoQuickSheet visible={memoOpen} tagLabel="Video 화면에서" onClose={() => setMemoOpen(false)}
-        onSave={(text) => { addQuickMemo(setUserData, text, "", "Video"); setMemoOpen(false); }} />
+      <MemoQuickSheet visible={memoOpen} onClose={() => setMemoOpen(false)}
+        onSave={(front, back) => { addQuickMemo(setUserData, front, back); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1359,8 +1340,8 @@ function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
         <button onClick={handleSave} disabled={!content.trim()} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 12, opacity: content.trim() ? 1 : 0.5 }}>저장하기</button>
         <button onClick={() => go("home")} style={{ ...S.btn, ...S.btnGhost }}>건너뛰기</button>
       </div>
-      <MemoQuickSheet visible={memoOpen} tagLabel="Diary 화면에서" onClose={() => setMemoOpen(false)}
-        onSave={(text) => { addQuickMemo(setUserData, text, "", "Diary"); setMemoOpen(false); }} />
+      <MemoQuickSheet visible={memoOpen} onClose={() => setMemoOpen(false)}
+        onSave={(front, back) => { addQuickMemo(setUserData, front, back); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1497,8 +1478,7 @@ function MemoQuiz({ memos, onExit }) {
         <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, textAlign: "right", marginBottom: 20 }}>외운 카드 {doneCount} / {total}</div>
         <div onClick={() => setFlipped((f) => !f)} style={{ cursor: "pointer", minHeight: 220, borderRadius: 20, background: "#fff", boxShadow: "0 8px 24px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", justifyContent: "center", padding: 28, textAlign: "center", marginBottom: 24 }}>
           <div>
-            {!flipped && cur.context && <div style={{ fontSize: 11, fontWeight: 700, color: C.primary, background: C.primaryLight, borderRadius: 6, padding: "2px 8px", display: "inline-block", marginBottom: 10 }}>{cur.context}</div>}
-            <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{flipped ? (cur.back || cur.context || "(뜻이 입력되지 않았어요)") : cur.front}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{flipped ? (cur.back || "(뜻이 입력되지 않았어요)") : cur.front}</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 16 }}>{flipped ? "탭해서 앞면 보기" : "탭해서 뜻 보기"}</div>
           </div>
         </div>
@@ -1551,7 +1531,6 @@ function MemoTab({ userData, setUserData }) {
         {memos.map((m) => (
           <div key={m.id} style={{ ...S.card, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
-              {m.context && <div style={{ fontSize: 11, fontWeight: 700, color: C.primary, background: C.primaryLight, borderRadius: 6, padding: "2px 6px", display: "inline-block", marginBottom: 6 }}>{m.context}</div>}
               <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>{m.front}</div>
               {m.back && <div style={{ fontSize: 13, color: C.sub }}>{m.back}</div>}
             </div>

@@ -168,6 +168,23 @@ const getChunks = (sentence) => {
   if (words.length <= 3) return [sentence];
   return splitOne(sentence);
 };
+// 아이템의 청크를 구한다: 구글시트 Chunk 컬럼(예: "Fine. / We'll call / her")이 채워져 있으면 그대로 사용,
+// 비어있으면(아직 입력 전) 기존 자동분리 로직(getChunks)으로 대신 채운다.
+const getItemChunks = (item) => {
+  if (!item) return [];
+  const raw = (item.Chunk || "").trim();
+  if (raw) {
+    return raw.split("/").map((c) => c.trim()).filter(Boolean);
+  }
+  return getChunks(item.English || "");
+};
+// 학습화면에서 바로 메모를 추가할 때 쓰는 공용 함수
+const addQuickMemo = (setUserData, text, context) => {
+  setUserData((prev) => ({
+    ...prev,
+    memos: [{ id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: text, back: "", context: context || "", createdAt: today() }, ...(prev.memos || [])],
+  }));
+};
 const calcNextReview = (level) => {
   const days = REVIEW_INTERVALS[Math.min(level, REVIEW_INTERVALS.length - 1)];
   const d = new Date(); d.setDate(d.getDate() + days);
@@ -365,7 +382,7 @@ function IconMemo({ size = 22, color = "currentColor" }) {
   );
 }
 
-function Header({ title, onBack, onQuit, onHome }) {
+function Header({ title, onBack, onQuit, onHome, onMemo }) {
   const roundBtnStyle = { width: 32, height: 32, borderRadius: "50%", background: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.sub, fontSize: 15, flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" };
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, minHeight: 44 }}>
@@ -377,7 +394,36 @@ function Header({ title, onBack, onQuit, onHome }) {
         <button onClick={onHome} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 0", lineHeight: 1, flexShrink: 0, display: "flex" }}><IconHome size={22} color={C.text} /></button>
       ) : <div style={{ width: 32 }} />}
       {title && <span style={{ fontWeight: 700, fontSize: 16, color: C.text, flex: 1, lineHeight: 1.3, textAlign: "center", fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{title}</span>}
-      <div style={{ width: 32, flexShrink: 0 }} />
+      {onMemo ? (
+        <button onClick={onMemo} style={roundBtnStyle}>📝</button>
+      ) : (
+        <div style={{ width: 32, flexShrink: 0 }} />
+      )}
+    </div>
+  );
+}
+
+function MemoQuickSheet({ visible, contextLabel, onClose, onSave }) {
+  const [text, setText] = useState("");
+  useEffect(() => { if (visible) setText(""); }, [visible]);
+  if (!visible) return null;
+  const handleSave = () => {
+    if (!text.trim()) return;
+    onSave(text.trim());
+  };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "22px 22px 28px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 32px rgba(0,0,0,0.15)" }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: C.border, margin: "0 auto 18px" }} />
+        <div style={{ fontWeight: 800, fontSize: 16, color: C.text, marginBottom: contextLabel ? 6 : 14 }}>📝 메모하기</div>
+        {contextLabel && <div style={{ fontSize: 12, color: C.sub, marginBottom: 14, lineHeight: 1.5 }}>{contextLabel}</div>}
+        <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="지금 배운 내용을 메모해보세요"
+          style={{ ...S.input, minHeight: 90, marginBottom: 14, display: "block" }} />
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onClose} style={{ ...S.btn, flex: 1, background: "#fff", color: C.sub, border: `1.5px solid ${C.border}` }}>취소</button>
+          <button onClick={handleSave} disabled={!text.trim()} style={{ ...S.btn, ...S.btnPrimary, flex: 1, opacity: text.trim() ? 1 : 0.5 }}>저장</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -481,7 +527,7 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
   const [result, setResult] = useState(null);
   const [hintCount, setHintCount] = useState(0);
   const curItem = shuffledItems[idx];
-  const hintChunks = curItem ? getChunks(curItem.English) : [];
+  const hintChunks = curItem ? getItemChunks(curItem) : [];
 
   useEffect(() => { onIdxChange?.(idx); }, [idx]);
   useEffect(() => { setHintCount(0); }, [idx]);
@@ -894,6 +940,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
   const [round, setRound] = useState(resume && savedState ? savedState.round : 1);
   const [spokenText, setSpokenText] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [memoOpen, setMemoOpen] = useState(false);
   const curItem = shuffledItems[idx];
   const total = shuffledItems.length;
   const totalRounds = 2;
@@ -939,23 +986,18 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
     }
   };
 
-  const isMemoSaved = (userData.memos || []).some((m) => m.itemId === curItem?.ItemID);
-  const handleToggleMemo = () => {
-    setUserData((prev) => {
-      const memos = prev.memos || [];
-      if (memos.some((m) => m.itemId === curItem.ItemID)) {
-        return { ...prev, memos: memos.filter((m) => m.itemId !== curItem.ItemID) };
-      }
-      const newMemo = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, itemId: curItem.ItemID, front: curItem.English, back: curItem.Korean, createdAt: today() };
-      return { ...prev, memos: [newMemo, ...memos] };
-    });
+  const { favorites = {} } = userData;
+  const isFav = curItem ? !!favorites[curItem.ItemID] : false;
+  const toggleFav = () => {
+    setUserData((prev) => { const f = { ...prev.favorites }; if (f[curItem.ItemID]) delete f[curItem.ItemID]; else f[curItem.ItemID] = true; return { ...prev, favorites: f }; });
   };
 
   if (!curItem) return null;
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="Repeat" onQuit={() => { stopMic(); stopSpeak(); setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }} />
+        <Header title="Repeat" onQuit={() => { stopMic(); stopSpeak(); setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }}
+          onMemo={() => setMemoOpen(true)} />
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 28 }}>
           {[1, 2].map((r) => (
@@ -963,7 +1005,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
           ))}
         </div>
         <div style={{ textAlign: "center", marginBottom: 28, minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
-          <button onClick={handleToggleMemo} style={{ position: "absolute", top: 0, right: 0, width: 30, height: 30, borderRadius: "50%", border: "none", background: isMemoSaved ? "#FFF7E0" : "transparent", fontSize: 15, cursor: "pointer", opacity: isMemoSaved ? 1 : 0.45 }}>📌</button>
+          <button onClick={toggleFav} style={{ position: "absolute", top: 0, right: 0, width: 30, height: 30, borderRadius: "50%", border: "none", background: "transparent", fontSize: 17, cursor: "pointer", color: isFav ? "#F5A623" : "#C4CBD3" }}>{isFav ? "★" : "☆"}</button>
           <div style={{ fontSize: 14, color: C.sub, marginBottom: 20, lineHeight: 1.7 }}>{curItem.Korean}</div>
           <div style={{ width: 26, height: 1, background: "#DCE2E8", margin: "0 auto 20px" }} />
           <div style={{ fontSize: 22, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{curItem.English}</div>
@@ -987,6 +1029,8 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
+      <MemoQuickSheet visible={memoOpen} contextLabel={curItem.English} onClose={() => setMemoOpen(false)}
+        onSave={(text) => { addQuickMemo(setUserData, text, curItem.English); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1008,16 +1052,17 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   const [idx, setIdx] = useState(resume ? savedIdx : 0);
   const [selected, setSelected] = useState([]);
   const [result, setResult] = useState(null);
+  const [memoOpen, setMemoOpen] = useState(false);
   const curItem = shuffledItems[idx];
 
   useEffect(() => { if (resume && savedIdx > 0) setResumeModal(true); }, []);
   const handleResumeContinue = () => setResumeModal(false);
   const handleResumeFresh = () => { setIdx(0); setResumeModal(false); };
 
-  const [chunkOptions, setChunkOptions] = useState(() => shuffle(getChunks(curItem?.English || "").map((c, i) => ({ id: i, text: c }))));
+  const [chunkOptions, setChunkOptions] = useState(() => shuffle(getItemChunks(curItem).map((c, i) => ({ id: i, text: c }))));
 
   useEffect(() => {
-    if (curItem) { setSelected([]); setResult(null); setChunkOptions(shuffle(getChunks(curItem.English).map((c, i) => ({ id: i, text: c })))); }
+    if (curItem) { setSelected([]); setResult(null); setChunkOptions(shuffle(getItemChunks(curItem).map((c, i) => ({ id: i, text: c })))); }
   }, [idx]);
   useEffect(() => {
     setUserData((prev) => {
@@ -1049,7 +1094,8 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="Writing" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }} />
+        <Header title="Writing" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }}
+          onMemo={() => setMemoOpen(true)} />
         <ProgressBar current={idx} total={shuffledItems.length} />
         <div style={{ textAlign: "center", minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: C.text, lineHeight: 1.6 }}>{curItem.Korean}</div>
@@ -1079,6 +1125,8 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
+      <MemoQuickSheet visible={memoOpen} contextLabel={curItem.English} onClose={() => setMemoOpen(false)}
+        onSave={(text) => { addQuickMemo(setUserData, text, curItem.English); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1090,6 +1138,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   const [done, setDone] = useState(false);
   const lessonItems = items.filter((it) => it.LessonID === lessonId && it.SourceID === sourceId);
   const [resumeModal, setResumeModal] = useState(false);
+  const [memoOpen, setMemoOpen] = useState(false);
   const savedIdx = (() => {
     const saved = quizProgress[key];
     return (saved && !isNaN(Number(saved)) && !saved.startsWith("preview") && !saved.startsWith("build")) ? Number(saved) : 0;
@@ -1132,7 +1181,8 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="Speaking Test" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }} />
+        <Header title="Speaking Test" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }}
+          onMemo={() => setMemoOpen(true)} />
         <QuizCoreWithIdx rawItems={lessonItems} initIdx={startIdx}
           onResult={handleResult}
           onIdxChange={(i) => setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: String(i) } }))}
@@ -1140,6 +1190,8 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
+      <MemoQuickSheet visible={memoOpen} contextLabel="Speaking Test" onClose={() => setMemoOpen(false)}
+        onSave={(text) => { addQuickMemo(setUserData, text, "Speaking Test"); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1148,6 +1200,7 @@ function StepVideoScreen({ go, nav, lessons, setUserData }) {
   const { lessonId, sourceId } = nav;
   const lesson = lessons.find((l) => l.LessonID === lessonId && l.SourceID === sourceId);
   const videoId = lesson?.VideoURL?.match(/(?:youtu\.be\/|v=)([^&\s]+)/)?.[1];
+  const [memoOpen, setMemoOpen] = useState(false);
   const handleNext = () => {
     setUserData((prev) => {
       const key = `${lessonId}_${sourceId}`;
@@ -1158,7 +1211,7 @@ function StepVideoScreen({ go, nav, lessons, setUserData }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="Video" onBack={() => go("home")} />
+        <Header title="Video" onBack={() => go("home")} onMemo={() => setMemoOpen(true)} />
         {lesson?.Title && (
           <div style={{ fontSize: 16, fontWeight: 700, color: C.text, lineHeight: 1.5, marginBottom: 14 }}>{lesson.Title}</div>
         )}
@@ -1169,6 +1222,8 @@ function StepVideoScreen({ go, nav, lessons, setUserData }) {
         )}
         <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>다음</button>
       </div>
+      <MemoQuickSheet visible={memoOpen} contextLabel={lesson?.Title} onClose={() => setMemoOpen(false)}
+        onSave={(text) => { addQuickMemo(setUserData, text, lesson?.Title); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1179,6 +1234,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
   const source = sources.find((s) => s.SourceID === sourceId);
   const key = `${lessonId}_${sourceId}`;
   const [content, setContent] = useState("");
+  const [memoOpen, setMemoOpen] = useState(false);
   const handleSave = () => {
     if (!content.trim()) return;
     const diary = { id: `${lessonId}_${sourceId}_${Date.now()}`, lessonId, sourceId, lessonTitle: lesson?.Title || "", sourceName: source?.Name || "", content: content.trim(), date: today(), createdAt: new Date().toISOString() };
@@ -1192,7 +1248,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="Diary" onBack={() => go("home")} />
+        <Header title="Diary" onBack={() => go("home")} onMemo={() => setMemoOpen(true)} />
         {lesson?.DiaryPrompt && (
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, marginBottom: 8 }}>💡 오늘의 주제</div>
@@ -1204,6 +1260,8 @@ function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
         <button onClick={handleSave} disabled={!content.trim()} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 12, opacity: content.trim() ? 1 : 0.5 }}>저장하기</button>
         <button onClick={() => go("home")} style={{ ...S.btn, ...S.btnGhost }}>건너뛰기</button>
       </div>
+      <MemoQuickSheet visible={memoOpen} contextLabel={lesson?.Title} onClose={() => setMemoOpen(false)}
+        onSave={(text) => { addQuickMemo(setUserData, text, lesson?.Title); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1339,7 +1397,8 @@ function MemoQuiz({ memos, onExit }) {
         <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, textAlign: "right", marginBottom: 20 }}>외운 카드 {doneCount} / {total}</div>
         <div onClick={() => setFlipped((f) => !f)} style={{ cursor: "pointer", minHeight: 220, borderRadius: 20, background: "#fff", boxShadow: "0 8px 24px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", justifyContent: "center", padding: 28, textAlign: "center", marginBottom: 24 }}>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{flipped ? (cur.back || "(뜻이 입력되지 않았어요)") : cur.front}</div>
+            {!flipped && cur.context && <div style={{ fontSize: 11, fontWeight: 700, color: C.primary, background: C.primaryLight, borderRadius: 6, padding: "2px 8px", display: "inline-block", marginBottom: 10 }}>{cur.context}</div>}
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{flipped ? (cur.back || cur.context || "(뜻이 입력되지 않았어요)") : cur.front}</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 16 }}>{flipped ? "탭해서 앞면 보기" : "탭해서 뜻 보기"}</div>
           </div>
         </div>
@@ -1388,11 +1447,12 @@ function MemoTab({ userData, setUserData }) {
           </div>
         )}
         {memos.length === 0 && !showForm && (
-          <div style={{ textAlign: "center", color: C.sub, padding: 40, lineHeight: 1.7 }}>아직 저장한 메모가 없어요.<br />학습 중 📌를 누르거나 위에서 직접 추가해보세요</div>
+          <div style={{ textAlign: "center", color: C.sub, padding: 40, lineHeight: 1.7 }}>아직 저장한 메모가 없어요.<br />학습 화면 상단의 📝를 누르거나 위에서 직접 추가해보세요</div>
         )}
         {memos.map((m) => (
           <div key={m.id} style={{ ...S.card, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
+              {m.context && <div style={{ fontSize: 11, fontWeight: 700, color: C.primary, background: C.primaryLight, borderRadius: 6, padding: "2px 6px", display: "inline-block", marginBottom: 6 }}>{m.context}</div>}
               <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>{m.front}</div>
               {m.back && <div style={{ fontSize: 13, color: C.sub }}>{m.back}</div>}
             </div>

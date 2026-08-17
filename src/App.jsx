@@ -212,7 +212,7 @@ const fetchSheet = async (sheetName) => {
 
 
 
-const DEFAULT_DATA = { progress: {}, studyDays: [], quizProgress: {}, favorites: {}, diaries: [], stepDone: {} };
+const DEFAULT_DATA = { progress: {}, studyDays: [], quizProgress: {}, favorites: {}, diaries: [], stepDone: {}, memos: [] };
 const loadUserData = async (uid) => {
   const snap = await getDoc(doc(db, "users", uid));
   return snap.exists() ? { ...DEFAULT_DATA, ...snap.data() } : { ...DEFAULT_DATA };
@@ -355,6 +355,15 @@ function IconScript({ size = 22, color = "currentColor" }) {
     </svg>
   );
 }
+function IconMemo({ size = 22, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h16v12H9l-5 5V4z" />
+      <line x1="8" y1="9" x2="16" y2="9" />
+      <line x1="8" y1="13" x2="13" y2="13" />
+    </svg>
+  );
+}
 
 function Header({ title, onBack, onQuit, onHome }) {
   const roundBtnStyle = { width: 32, height: 32, borderRadius: "50%", background: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.sub, fontSize: 15, flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" };
@@ -432,6 +441,7 @@ function TabBar({ tab, setTab }) {
     { id: "like", Icon: IconStar, label: "Like" },
     { id: "diary", Icon: IconDiary, label: "Diary" },
     { id: "script", Icon: IconScript, label: "Script" },
+    { id: "memo", Icon: IconMemo, label: "Memo" },
   ];
   return (
     <div style={{
@@ -648,10 +658,10 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
     const hasVideo = !!lesson?.VideoURL;
     const steps = [];
     let num = 1;
-    if (hasVideo) { steps.push({ id: "stepVideo", type: "video", label: "영상 보기", num: num++ }); }
-    steps.push({ id: "stepRead", type: "read", label: "따라읽기", num: num++ });
-    steps.push({ id: "stepBuild", type: "build", label: "문장 만들기", num: num++ });
-    steps.push({ id: "stepQuiz", type: "quiz", label: "Speaking", num: num++ });
+    if (hasVideo) { steps.push({ id: "stepVideo", type: "video", label: "Video", num: num++ }); }
+    steps.push({ id: "stepRead", type: "read", label: "Repeat", num: num++ });
+    steps.push({ id: "stepBuild", type: "build", label: "Writing", num: num++ });
+    steps.push({ id: "stepQuiz", type: "quiz", label: "Speaking Test", num: num++ });
     steps.push({ id: "stepDiary", type: "diary", label: "Diary", num: num++ });
     return steps;
   };
@@ -710,7 +720,7 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
             <button onClick={() => go("courseSelect")} style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 20, padding: "8px 16px", fontWeight: 700, fontSize: 14, color: C.primaryDark, cursor: "pointer", fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>
               Course ▾
             </button>
-            <div onClick={() => go("calendar")} style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4, background: "#fff", border: `1px solid ${C.border}`, borderRadius: 20, padding: "8px 14px", cursor: "pointer" }}>
+            <div onClick={() => go("calendar")} style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4, cursor: "pointer", padding: "8px 6px" }}>
               <span style={{ fontSize: 18 }}>🔥</span>
               <span style={{ fontWeight: 800, fontSize: 16, color: C.accent, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{streakDays}</span>
             </div>
@@ -929,31 +939,51 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
     }
   };
 
+  const isMemoSaved = (userData.memos || []).some((m) => m.itemId === curItem?.ItemID);
+  const handleToggleMemo = () => {
+    setUserData((prev) => {
+      const memos = prev.memos || [];
+      if (memos.some((m) => m.itemId === curItem.ItemID)) {
+        return { ...prev, memos: memos.filter((m) => m.itemId !== curItem.ItemID) };
+      }
+      const newMemo = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, itemId: curItem.ItemID, front: curItem.English, back: curItem.Korean, createdAt: today() };
+      return { ...prev, memos: [newMemo, ...memos] };
+    });
+  };
+
   if (!curItem) return null;
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="따라읽기" onQuit={() => { stopMic(); stopSpeak(); setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }} />
+        <Header title="Repeat" onQuit={() => { stopMic(); stopSpeak(); setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }} />
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 28 }}>
           {[1, 2].map((r) => (
             <span key={r} style={{ fontSize: 12, fontWeight: 700, color: round === r ? C.primary : "#C4CBD3" }}>{r}회차</span>
           ))}
         </div>
-        <div style={{ textAlign: "center", marginBottom: 28, minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ textAlign: "center", marginBottom: 28, minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
+          <button onClick={handleToggleMemo} style={{ position: "absolute", top: 0, right: 0, width: 30, height: 30, borderRadius: "50%", border: "none", background: isMemoSaved ? "#FFF7E0" : "transparent", fontSize: 15, cursor: "pointer", opacity: isMemoSaved ? 1 : 0.45 }}>📌</button>
           <div style={{ fontSize: 14, color: C.sub, marginBottom: 20, lineHeight: 1.7 }}>{curItem.Korean}</div>
           <div style={{ width: 26, height: 1, background: "#DCE2E8", margin: "0 auto 20px" }} />
           <div style={{ fontSize: 22, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{curItem.English}</div>
         </div>
-        <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-          <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#fff", color: C.text, fontWeight: 700, fontSize: 14, border: `1px solid ${C.border}` }}>🔊 듣기</button>
-          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#F04452" : "#4DD9B8", color: "#fff", fontWeight: 700, fontSize: 14, border: "none" }}>
-            {listening ? "■ 중지" : "🎤 따라읽기"}
-          </button>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 4, height: 64, margin: "40px 0 16px" }}>
+          {[14, 28, 44, 20, 36, 48, 22, 32, 16, 26].map((h, i) => (
+            <div key={i} style={{ width: 4, height: h, borderRadius: 2, background: listening ? C.primary : "#B9C8F5", transition: "background 0.2s" }} />
+          ))}
         </div>
         {spokenText && <div style={{ fontSize: 13, color: C.sub, marginBottom: 12, textAlign: "center" }}>내 답 : {spokenText}</div>}
         {feedback && <div style={{ textAlign: "center", color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 12 }}>{feedback}</div>}
-        <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>다음</button>
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 32, padding: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
+            <button onClick={() => speak(curItem.English)} style={{ width: 48, height: 48, borderRadius: "50%", border: "none", background: "transparent", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>🔊</button>
+            <button onClick={listening ? stopMic : startMic} style={{ width: 58, height: 58, borderRadius: "50%", border: "none", background: listening ? "#F04452" : C.primary, color: "#fff", fontSize: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: `0 4px 14px ${listening ? "rgba(240,68,82,0.4)" : "rgba(49,130,246,0.4)"}` }}>
+              {listening ? "■" : "🎤"}
+            </button>
+            <button onClick={handleNext} style={{ width: 48, height: 48, borderRadius: "50%", border: "none", background: "transparent", fontSize: 18, color: C.sub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>→</button>
+          </div>
+        </div>
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
@@ -1019,7 +1049,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="문장 만들기" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }} />
+        <Header title="Writing" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }} />
         <ProgressBar current={idx} total={shuffledItems.length} />
         <div style={{ textAlign: "center", minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: C.text, lineHeight: 1.6 }}>{curItem.Korean}</div>
@@ -1128,7 +1158,7 @@ function StepVideoScreen({ go, nav, lessons, setUserData }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="영상 보기" onBack={() => go("home")} />
+        <Header title="Video" onBack={() => go("home")} />
         {lesson?.Title && (
           <div style={{ fontSize: 16, fontWeight: 700, color: C.text, lineHeight: 1.5, marginBottom: 14 }}>{lesson.Title}</div>
         )}
@@ -1162,7 +1192,7 @@ function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="Diary 쓰기" onBack={() => go("home")} />
+        <Header title="Diary" onBack={() => go("home")} />
         {lesson?.DiaryPrompt && (
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, marginBottom: 8 }}>💡 오늘의 주제</div>
@@ -1208,7 +1238,7 @@ function ReviewTab({ userData, setUserData, items, go }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="오늘의 복습" onQuit={() => go("home")} />
+        <Header title="영어로 적기" onQuit={() => go("home")} />
         <QuizCoreWithIdx rawItems={reviewItems} onResult={handleResult} onDone={() => setDone(true)} />
       </div>
     </div>
@@ -1256,7 +1286,6 @@ function LikeTab({ userData, setUserData, items }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <div style={{ fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 20 }}>저장한 문장</div>
         {favItems.length > 0 && (
           <button onClick={() => setQuizMode(true)} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 16 }}>🎲 랜덤 QUIZ</button>
         )}
@@ -1267,6 +1296,107 @@ function LikeTab({ userData, setUserData, items }) {
             <div style={{ fontSize: 13, color: C.sub, marginBottom: 6 }}>{it.Korean}</div>
             <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 12 }}>{it.English}</div>
             <button onClick={() => speak(it.English)} style={{ ...S.btn, ...S.btnSecondary, padding: "8px 16px", fontSize: 13 }}>🔊 듣기</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MemoQuiz({ memos, onExit }) {
+  const [queue, setQueue] = useState(() => shuffle(memos));
+  const [flipped, setFlipped] = useState(false);
+  const [doneCount, setDoneCount] = useState(0);
+  const total = memos.length;
+  const cur = queue[0];
+
+  const handleAgain = () => {
+    setFlipped(false);
+    setQueue((q) => [...q.slice(1), q[0]]);
+  };
+  const handleKnown = () => {
+    setFlipped(false);
+    setDoneCount((n) => n + 1);
+    setQueue((q) => q.slice(1));
+  };
+
+  if (!cur) {
+    return (
+      <div style={S.page}>
+        <div style={{ ...S.inner, textAlign: "center", paddingTop: 60 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: C.text, marginBottom: 32 }}>모든 카드를 외웠어요!</div>
+          <button onClick={onExit} style={{ ...S.btn, ...S.btnPrimary }}>돌아가기</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={S.page}>
+      <div style={S.inner}>
+        <Header title="카드 퀴즈" onQuit={onExit} />
+        <div style={{ fontSize: 12, color: C.sub, fontWeight: 600, textAlign: "right", marginBottom: 20 }}>외운 카드 {doneCount} / {total}</div>
+        <div onClick={() => setFlipped((f) => !f)} style={{ cursor: "pointer", minHeight: 220, borderRadius: 20, background: "#fff", boxShadow: "0 8px 24px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", justifyContent: "center", padding: 28, textAlign: "center", marginBottom: 24 }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{flipped ? (cur.back || "(뜻이 입력되지 않았어요)") : cur.front}</div>
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 16 }}>{flipped ? "탭해서 앞면 보기" : "탭해서 뜻 보기"}</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={handleAgain} style={{ ...S.btn, ...S.btnSecondary, flex: 1 }}>다시 볼래요</button>
+          <button onClick={handleKnown} style={{ ...S.btn, ...S.btnPrimary, flex: 1 }}>외웠어요 ✓</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MemoTab({ userData, setUserData }) {
+  const { memos = [] } = userData;
+  const [showForm, setShowForm] = useState(false);
+  const [front, setFront] = useState("");
+  const [back, setBack] = useState("");
+  const [quizMode, setQuizMode] = useState(false);
+
+  const addMemo = () => {
+    if (!front.trim()) return;
+    const newMemo = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: front.trim(), back: back.trim(), createdAt: today() };
+    setUserData((prev) => ({ ...prev, memos: [newMemo, ...(prev.memos || [])] }));
+    setFront(""); setBack(""); setShowForm(false);
+  };
+
+  const deleteMemo = (id) => {
+    setUserData((prev) => ({ ...prev, memos: (prev.memos || []).filter((m) => m.id !== id) }));
+  };
+
+  if (quizMode) return <MemoQuiz memos={memos} onExit={() => setQuizMode(false)} />;
+
+  return (
+    <div style={S.page}>
+      <div style={S.inner}>
+        <div style={{ fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 20, textAlign: "center" }}>메모장</div>
+        {memos.length > 0 && (
+          <button onClick={() => setQuizMode(true)} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 16 }}>🎴 카드 퀴즈 시작</button>
+        )}
+        <button onClick={() => setShowForm((v) => !v)} style={{ ...S.btn, ...S.btnSecondary, marginBottom: 16 }}>{showForm ? "닫기" : "+ 새 메모 추가"}</button>
+        {showForm && (
+          <div style={{ ...S.card, marginBottom: 20 }}>
+            <input value={front} onChange={(e) => setFront(e.target.value)} placeholder="단어 또는 문장 (앞면)" style={{ ...S.input, marginBottom: 10 }} />
+            <textarea value={back} onChange={(e) => setBack(e.target.value)} placeholder="뜻 / 설명 (뒷면)" style={{ ...S.input, minHeight: 60, marginBottom: 10 }} />
+            <button onClick={addMemo} disabled={!front.trim()} style={{ ...S.btn, ...S.btnPrimary, opacity: front.trim() ? 1 : 0.5 }}>저장</button>
+          </div>
+        )}
+        {memos.length === 0 && !showForm && (
+          <div style={{ textAlign: "center", color: C.sub, padding: 40, lineHeight: 1.7 }}>아직 저장한 메모가 없어요.<br />학습 중 📌를 누르거나 위에서 직접 추가해보세요</div>
+        )}
+        {memos.map((m) => (
+          <div key={m.id} style={{ ...S.card, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>{m.front}</div>
+              {m.back && <div style={{ fontSize: 13, color: C.sub }}>{m.back}</div>}
+            </div>
+            <button onClick={() => deleteMemo(m.id)} style={{ background: "none", border: "none", color: C.sub, fontSize: 14, cursor: "pointer" }}>✕</button>
           </div>
         ))}
       </div>
@@ -1285,7 +1415,7 @@ function DiaryTab({ userData, setUserData, go }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <div style={{ fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 20 }}>내 다이어리</div>
+        <div style={{ fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 20, textAlign: "center" }}>Diary</div>
         {sorted.length === 0 && <div style={{ textAlign: "center", color: C.sub, padding: 40 }}>아직 작성한 다이어리가 없어요</div>}
         {sorted.map((d) => (
           <div key={d.id} style={{ ...S.card, cursor: "pointer" }} onClick={() => go("diaryDetail", { diaryId: d.id })}>
@@ -1403,7 +1533,7 @@ function ScriptTab({ go, sources, lessons, categories }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <div style={{ fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 20 }}>Script</div>
+        <div style={{ fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 20, textAlign: "center" }}>Script</div>
         {catGroups.map(({ cat, srcs }) => (
           <div key={cat.CategoryID} style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 8 }}>{cat.Name}</div>
@@ -1590,6 +1720,7 @@ export default function App() {
     like: <LikeTab {...shared} />,
     diary: <DiaryTab {...shared} />,
     script: <ScriptTab {...shared} />,
+    memo: <MemoTab {...shared} />,
   };
 
   return (

@@ -24,23 +24,23 @@ const SHEET_ID = "1njMTapDCnpFP4mj6U0EEHPGumHfbBVWrljrX99_zUg0";
 const REVIEW_INTERVALS = [1, 2, 3, 7, 14, 30, 45, 60, 75, 90];
 
 const C = {
-  bg: "#FFFBE8",
+  bg: "#F2F4F6",
   card: "#FFFFFF",
-  primary: "#F59E0B",
-  primaryDark: "#D97706",
-  primaryLight: "#FEF3C7",
-  accent: "#F97316",
-  accentLight: "#FFF7ED",
-  text: "#1C1917",
-  sub: "#78716C",
-  border: "#E7E5E4",
-  borderLight: "#F5F5F4",
-  error: "#EF4444",
-  errorBg: "#FEF2F2",
-  errorBorder: "#FCA5A5",
-  done: "#D97706",
-  doneBg: "#FEF3C7",
-  doneBorder: "#FDE68A",
+  primary: "#3182F6",
+  primaryDark: "#1B64DA",
+  primaryLight: "#E8F3FF",
+  accent: "#3182F6",
+  accentLight: "#E8F3FF",
+  text: "#191F28",
+  sub: "#8B95A1",
+  border: "#E5E8EB",
+  borderLight: "#F2F4F6",
+  error: "#F04452",
+  errorBg: "#FFF0F1",
+  errorBorder: "#FFB3B8",
+  done: "#3182F6",
+  doneBg: "#E8F3FF",
+  doneBorder: "#BFDBFE",
 };
 
 const S = {
@@ -51,21 +51,21 @@ const S = {
   },
   inner: { maxWidth: 480, margin: "0 auto", padding: "20px 16px 20px" },
   card: {
-    background: C.card, borderRadius: 16,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04)",
-    padding: "16px 20px", marginBottom: 12,
+    background: C.card, borderRadius: 20,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+    padding: "18px 20px", marginBottom: 12,
   },
   btn: {
-    display: "block", width: "100%", padding: "14px 20px", borderRadius: 12,
+    display: "block", width: "100%", padding: "15px 20px", borderRadius: 14,
     border: "none", fontWeight: 700, fontSize: 15, cursor: "pointer",
     transition: "all 0.15s", textAlign: "center",
   },
   btnPrimary: { background: C.primary, color: "#fff" },
   btnSecondary: { background: C.primaryLight, color: C.primaryDark },
   btnGhost: { background: "transparent", color: C.sub, border: `1.5px solid ${C.border}` },
-  btnDanger: { background: "#FEE2E2", color: "#EF4444" },
+  btnDanger: { background: C.errorBg, color: C.error },
   input: {
-    width: "100%", padding: "12px 14px", borderRadius: 10,
+    width: "100%", padding: "12px 14px", borderRadius: 12,
     border: `1.5px solid ${C.border}`, fontSize: 15, outline: "none",
     boxSizing: "border-box", background: "#fff", color: C.text,
     fontFamily: "inherit", resize: "none",
@@ -264,7 +264,7 @@ function ProgressBar({ current, total }) {
         <span style={{ fontSize: 12, color: C.sub, fontWeight: 600 }}>{current} / {total}</span>
         <span style={{ fontSize: 12, color: C.primaryDark, fontWeight: 700 }}>{pct}%</span>
       </div>
-      <div style={{ height: 8, background: "#E7E5E4", borderRadius: 99 }}>
+      <div style={{ height: 8, background: C.border, borderRadius: 99 }}>
         <div style={{ height: "100%", background: C.primary, borderRadius: 99, width: `${pct}%`, transition: "width 0.3s" }} />
       </div>
     </div>
@@ -382,7 +382,7 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
         <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.6, marginBottom: 14 }}>{curItem.Korean}</div>
         <button onClick={() => speak(curItem.English)} style={{ background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, color: C.primaryDark, fontWeight: 600 }}>🔊 듣기</button>
       </div>
-      <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, background: listening ? "#EF4444" : "#4DD9B8", color: "#fff", marginBottom: 12, fontSize: 16, padding: "16px" }}>
+      <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, background: listening ? "#F04452" : "#4DD9B8", color: "#fff", marginBottom: 12, fontSize: 16, padding: "16px" }}>
         {listening ? "■ 녹음 중지" : "🎤 영어로 말하기"}
       </button>
       <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="또는 직접 영어로 입력하세요"
@@ -416,7 +416,7 @@ function LoginScreen() {
       <div style={{ textAlign: "center", padding: "0 32px", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <img src={duckImg} alt="QUAK" style={{ width: 120, height: 120, objectFit: "contain", marginBottom: 32, filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }} />
         <div style={{ color: C.primaryDark, fontSize: 40, fontWeight: 900, letterSpacing: 2, marginBottom: 32 }}>QUAK</div>
-        <button onClick={handleGoogle} disabled={loading} style={{ ...S.btn, background: C.primary, color: "#fff", boxShadow: "0 4px 20px rgba(245,158,11,0.4)", fontSize: 20, padding: "16px 24px", width: "260px", borderRadius: 20 }}>
+        <button onClick={handleGoogle} disabled={loading} style={{ ...S.btn, background: C.primary, color: "#fff", boxShadow: "0 4px 20px rgba(49,130,246,0.4)", fontSize: 20, padding: "16px 24px", width: "260px", borderRadius: 20 }}>
           {loading ? "로그인 중..." : "Google로 시작하기"}
         </button>
       </div>
@@ -585,7 +585,7 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
               {menuOpen && (
                 <div style={{ position: "absolute", right: 0, top: 48, background: "#fff", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", padding: 8, minWidth: 140, zIndex: 100 }}>
                   <button onClick={() => { setMenuOpen(false); signOut(auth); }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", textAlign: "left", cursor: "pointer", fontSize: 14, color: C.text, borderRadius: 8 }}>로그아웃</button>
-                  <button onClick={() => { setMenuOpen(false); handleDeleteAccount(); }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", textAlign: "left", cursor: "pointer", fontSize: 14, color: "#EF4444", borderRadius: 8 }}>회원 탈퇴</button>
+                  <button onClick={() => { setMenuOpen(false); handleDeleteAccount(); }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", textAlign: "left", cursor: "pointer", fontSize: 14, color: "#F04452", borderRadius: 8 }}>회원 탈퇴</button>
                 </div>
               )}
             </div>
@@ -802,7 +802,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {[1, 2].map((r) => (
-            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round >= r ? "#FEF3C7" : "#fff", color: round >= r ? C.primaryDark : C.sub, border: "none", boxShadow: "0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04)" }}>
+            <div key={r} style={{ flex: 1, padding: "8px 0", borderRadius: 10, textAlign: "center", fontWeight: 700, fontSize: 13, background: round >= r ? C.primaryLight : "#fff", color: round >= r ? C.primaryDark : C.sub, border: "none", boxShadow: "0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04)" }}>
               {r}회차
             </div>
           ))}
@@ -814,7 +814,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         </div>
         <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
           <button onClick={() => speak(curItem.English)} style={{ ...S.btn, flex: 1, padding: "12px", background: "#fff", color: C.text, fontWeight: 700, fontSize: 14, border: "none", boxShadow: "0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04)" }}>🔊 듣기</button>
-          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#EF4444" : "#4DD9B8", color: "#fff", fontWeight: 700, fontSize: 14 }}>
+          <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, flex: 1, padding: "12px", background: listening ? "#F04452" : "#4DD9B8", color: "#fff", fontWeight: 700, fontSize: 14 }}>
             {listening ? "■ 중지" : "🎤 따라읽기"}
           </button>
         </div>
@@ -949,7 +949,7 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
             const isSelected = selected.find(s => s.id === opt.id);
             return (
               <button key={opt.id} onClick={() => isSelected ? handleDeselect(opt, selected.findIndex(s => s.id === opt.id)) : handleSelect(opt)}
-                style={{ background: isSelected ? "#FCD34D" : C.primaryLight, color: isSelected ? "#92400E" : C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
+                style={{ background: isSelected ? C.primary : C.primaryLight, color: isSelected ? "#fff" : C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
             );
           })}
         </div>

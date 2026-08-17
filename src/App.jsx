@@ -46,7 +46,7 @@ const C = {
 const S = {
   page: {
     position: "fixed", inset: 0, background: C.bg, overflowY: "auto",
-    fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif",
+    fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif",
     paddingBottom: 70,
   },
   inner: { maxWidth: 480, margin: "0 auto", padding: "20px 16px 20px" },
@@ -59,6 +59,7 @@ const S = {
     display: "block", width: "100%", padding: "15px 20px", borderRadius: 14,
     border: "none", fontWeight: 700, fontSize: 15, cursor: "pointer",
     transition: "all 0.15s", textAlign: "center",
+    fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif",
   },
   btnPrimary: { background: C.primary, color: "#fff" },
   btnSecondary: { background: C.primaryLight, color: C.primaryDark },
@@ -82,14 +83,91 @@ const similarityScore = (expected, given) => {
   return exp.length > 0 ? matches / exp.length : 0;
 };
 const today = () => new Date().toISOString().slice(0, 10);
+let cachedVoices = [];
+const refreshVoices = () => { cachedVoices = window.speechSynthesis.getVoices(); };
+if (typeof window !== "undefined" && window.speechSynthesis) {
+  refreshVoices();
+  window.speechSynthesis.onvoiceschanged = refreshVoices;
+}
+const pickBestVoice = () => {
+  const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
+  return (
+    voices.find((v) => v.lang === "en-US" && /Google|Natural|Online|Neural/i.test(v.name)) ||
+    voices.find((v) => v.lang === "en-US") ||
+    voices.find((v) => v.lang && v.lang.startsWith("en")) ||
+    null
+  );
+};
+let speakKeepAlive = null;
 const speak = (text) => {
   window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "en-US"; u.rate = 0.9;
-  window.speechSynthesis.speak(u);
+  if (speakKeepAlive) clearInterval(speakKeepAlive);
+  setTimeout(() => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US"; u.rate = 0.9;
+    const voice = pickBestVoice();
+    if (voice) u.voice = voice;
+    u.onend = () => { if (speakKeepAlive) clearInterval(speakKeepAlive); };
+    u.onerror = () => { if (speakKeepAlive) clearInterval(speakKeepAlive); };
+    window.speechSynthesis.speak(u);
+    // 크롬 특유의 "말하다가 중간에 끊기는" 버그 방지용 (일정 간격으로 살짝 깨워줌)
+    speakKeepAlive = setInterval(() => {
+      if (!window.speechSynthesis.speaking) { clearInterval(speakKeepAlive); return; }
+      window.speechSynthesis.pause();
+      window.speechSynthesis.resume();
+    }, 4000);
+  }, 80);
 };
-const stopSpeak = () => window.speechSynthesis.cancel();
+const stopSpeak = () => {
+  if (speakKeepAlive) clearInterval(speakKeepAlive);
+  window.speechSynthesis.cancel();
+};
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+const getChunks = (sentence) => {
+  const CONJUNCTIONS = /^(and|but|or|so|because|until|when|while|if|before|after|though|although|unless|that|which|who)$/i;
+  const PREPOSITIONS = /^(for|in|on|at|of|with|by|from|about|into|through|during|a|an|the)$/i;
+  const words = sentence.split(" ");
+
+  // 각 문장을 접속사/전치사 기준으로 쪼개는 내부 함수
+  const splitOne = (s) => {
+    const ws = s.split(" ");
+    if (ws.length <= 3) return [s];
+    let chunks = [];
+    let current = [];
+    for (let i = 0; i < ws.length; i++) {
+      if (i > 0 && current.length >= 2 && (CONJUNCTIONS.test(ws[i]) || PREPOSITIONS.test(ws[i]))) {
+        chunks.push(current.join(" "));
+        current = [ws[i]];
+      } else {
+        current.push(ws[i]);
+      }
+    }
+    if (current.length > 0) chunks.push(current.join(" "));
+    // 너무 긴 청크 추가 분리
+    const out = [];
+    for (const chunk of chunks) {
+      const cw = chunk.split(" ");
+      if (cw.length > 8) {
+        const mid = Math.ceil(cw.length / 2);
+        out.push(cw.slice(0, mid).join(" "));
+        out.push(cw.slice(mid).join(" "));
+      } else { out.push(chunk); }
+    }
+    return out.length > 1 ? out : [s];
+  };
+
+  // 구두점 기준으로 먼저 문장 분리
+  const punctChunks = sentence.split(/(?<=[.?!,])\s+/).filter(s => s.trim());
+  if (punctChunks.length > 1) {
+    // 각 문장도 추가로 쪼개기
+    const all = [];
+    for (const pc of punctChunks) { splitOne(pc).forEach(c => all.push(c)); }
+    return all;
+  }
+
+  if (words.length <= 3) return [sentence];
+  return splitOne(sentence);
+};
 const calcNextReview = (level) => {
   const days = REVIEW_INTERVALS[Math.min(level, REVIEW_INTERVALS.length - 1)];
   const d = new Date(); d.setDate(d.getDate() + days);
@@ -97,8 +175,8 @@ const calcNextReview = (level) => {
 };
 
 const fetchSheet = async (sheetName) => {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-  const res = await fetch(url);
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
+  const res = await fetch(url, { cache: "no-store" });
   const text = await res.text();
   
   // 큰따옴표 안의 줄바꿈을 처리하는 CSV 파서
@@ -238,6 +316,46 @@ function useMic(onResult) {
   return { listening, startMic, stopMic };
 }
 
+function IconHome({ size = 22, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11l9-8 9 8" />
+      <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
+    </svg>
+  );
+}
+function IconReview({ size = 22, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <polyline points="21 3 21 9 15 9" />
+    </svg>
+  );
+}
+function IconStar({ size = 22, color = "currentColor", filled = false }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? color : "none"} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+function IconDiary({ size = 22, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  );
+}
+function IconScript({ size = 22, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 4.5h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z" />
+      <path d="M22 4.5h-6a3 3 0 0 0-3 3v13A2.5 2.5 0 0 1 15.5 18H22z" />
+    </svg>
+  );
+}
+
 function Header({ title, onBack, onQuit, onHome }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, minHeight: 44 }}>
@@ -245,10 +363,10 @@ function Header({ title, onBack, onQuit, onHome }) {
         <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: C.text, padding: "4px 0", lineHeight: 1, flexShrink: 0 }}>←</button>
       )}
       {onHome && (
-        <button onClick={onHome} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: C.text, padding: "4px 0", lineHeight: 1, flexShrink: 0 }}>🏠</button>
+        <button onClick={onHome} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 0", lineHeight: 1, flexShrink: 0, display: "flex" }}><IconHome size={22} color={C.text} /></button>
       )}
       {onQuit && !onBack && !onHome && <div style={{ width: 22 }} />}
-      {title && <span style={{ fontWeight: 700, fontSize: 16, color: C.text, flex: 1, lineHeight: 1.3, textAlign: "left" }}>{title}</span>}
+      {title && <span style={{ fontWeight: 700, fontSize: 16, color: C.text, flex: 1, lineHeight: 1.3, textAlign: "left", fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{title}</span>}
       {onQuit && (
         <button onClick={onQuit} style={{ ...S.btn, ...S.btnDanger, width: "auto", padding: "8px 14px", fontSize: 13, flexShrink: 0 }}>그만하기</button>
       )}
@@ -311,11 +429,11 @@ function ResultCard({ correct, english }) {
 
 function TabBar({ tab, setTab }) {
   const tabs = [
-    { id: "home", icon: "🏠", label: "Home" },
-    { id: "review", icon: "🔄", label: "Review" },
-    { id: "like", icon: "⭐", label: "Like" },
-    { id: "diary", icon: "📔", label: "Diary" },
-    { id: "script", icon: "📖", label: "Script" },
+    { id: "home", Icon: IconHome, label: "Home" },
+    { id: "review", Icon: IconReview, label: "Review" },
+    { id: "like", Icon: IconStar, label: "Like" },
+    { id: "diary", Icon: IconDiary, label: "Diary" },
+    { id: "script", Icon: IconScript, label: "Script" },
   ];
   return (
     <div style={{
@@ -328,7 +446,7 @@ function TabBar({ tab, setTab }) {
           flex: 1, padding: "10px 0 14px", background: "none", border: "none", cursor: "pointer",
           display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
         }}>
-          <span style={{ fontSize: 22 }}>{t.icon}</span>
+          <t.Icon size={22} color={tab === t.id ? C.primary : C.sub} />
           <span style={{ fontSize: 11, fontWeight: tab === t.id ? 700 : 400, color: tab === t.id ? C.primary : C.sub }}>{t.label}</span>
           {tab === t.id && <div style={{ width: 20, height: 2, background: C.primary, borderRadius: 99 }} />}
         </button>
@@ -353,11 +471,19 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState(null);
+  const [hintCount, setHintCount] = useState(0);
   const curItem = shuffledItems[idx];
+  const hintChunks = curItem ? getChunks(curItem.English) : [];
 
   useEffect(() => { onIdxChange?.(idx); }, [idx]);
+  useEffect(() => { setHintCount(0); }, [idx]);
 
   const { listening, startMic, stopMic } = useMic((text) => setAnswer(text));
+
+  const handleHint = () => {
+    if (hintCount >= hintChunks.length) return;
+    setHintCount((n) => n + 1);
+  };
 
   const handleSubmit = () => {
     if (!answer.trim()) return;
@@ -368,7 +494,7 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
   };
 
   const handleNext = () => {
-    stopMic(); setAnswer(""); setResult(null); setSubmitted(false);
+    stopMic(); setAnswer(""); setResult(null); setSubmitted(false); setHintCount(0);
     if (idx + 1 < shuffledItems.length) setIdx(idx + 1);
     else onDone?.();
   };
@@ -378,15 +504,26 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
   return (
     <div>
       <ProgressBar current={idx} total={shuffledItems.length} />
-      <div style={{ ...S.card, marginBottom: 16 }}>
-        <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.6, marginBottom: 14 }}>{curItem.Korean}</div>
-        <button onClick={() => speak(curItem.English)} style={{ background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, color: C.primaryDark, fontWeight: 600 }}>🔊 듣기</button>
+      <div style={{ ...S.card, textAlign: "center", minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", marginBottom: 20 }}>
+        <button onClick={handleHint} disabled={submitted || hintCount >= hintChunks.length}
+          style={{ position: "absolute", top: 10, right: 10, width: 30, height: 30, borderRadius: "50%", border: "none", background: hintCount > 0 ? "#FFF7E0" : "transparent", fontSize: 16, cursor: hintCount >= hintChunks.length ? "default" : "pointer", opacity: submitted || hintCount >= hintChunks.length ? 0.4 : 1 }}>
+          💡
+        </button>
+        <div style={{ fontSize: 17, fontWeight: 700, color: C.text, lineHeight: 1.6 }}>{curItem.Korean}</div>
+        {hintCount > 0 && (
+          <div style={{ marginTop: 14, padding: "10px 12px", background: "#FFF7E0", borderRadius: 10, fontSize: 14, color: "#8A6200", fontWeight: 600, lineHeight: 1.6 }}>
+            {hintChunks.slice(0, hintCount).join(" ")}
+          </div>
+        )}
       </div>
-      <button onClick={listening ? stopMic : startMic} style={{ ...S.btn, background: listening ? "#F04452" : "#4DD9B8", color: "#fff", marginBottom: 12, fontSize: 16, padding: "16px" }}>
-        {listening ? "■ 녹음 중지" : "🎤 영어로 말하기"}
-      </button>
       <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="또는 직접 영어로 입력하세요"
-        style={{ ...S.input, minHeight: 72, marginBottom: 12, display: "block" }} />
+        style={{ ...S.input, minHeight: 64, marginBottom: 28, display: "block" }} />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 24 }}>
+        <button onClick={() => speak(curItem.English)} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", fontSize: 18, cursor: "pointer", flexShrink: 0 }}>🔊</button>
+        <button onClick={listening ? stopMic : startMic} style={{ width: 84, height: 84, borderRadius: "50%", border: "none", background: listening ? "#F04452" : C.primary, color: "#fff", fontSize: 32, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 10px 24px ${listening ? "rgba(240,68,82,0.35)" : "rgba(49,130,246,0.35)"}`, cursor: "pointer", flexShrink: 0 }}>
+          {listening ? "■" : "🎤"}
+        </button>
+      </div>
       {!submitted
         ? <button onClick={handleSubmit} disabled={!answer.trim()} style={{ ...S.btn, ...S.btnPrimary, opacity: answer.trim() ? 1 : 0.5 }}>제출</button>
         : (
@@ -412,10 +549,10 @@ function LoginScreen() {
     finally { setLoading(false); }
   };
   return (
-    <div style={{ position: "fixed", inset: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif" }}>
+    <div style={{ position: "fixed", inset: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>
       <div style={{ textAlign: "center", padding: "0 32px", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <img src={duckImg} alt="QUAK" style={{ width: 120, height: 120, objectFit: "contain", marginBottom: 32, filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }} />
-        <div style={{ color: C.primaryDark, fontSize: 40, fontWeight: 900, letterSpacing: 2, marginBottom: 32 }}>QUAK</div>
+        <div style={{ color: C.primaryDark, fontSize: 40, fontWeight: 900, letterSpacing: 2, marginBottom: 32, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>QUAK</div>
         <button onClick={handleGoogle} disabled={loading} style={{ ...S.btn, background: C.primary, color: "#fff", boxShadow: "0 4px 20px rgba(49,130,246,0.4)", fontSize: 20, padding: "16px 24px", width: "260px", borderRadius: 20 }}>
           {loading ? "로그인 중..." : "Google로 시작하기"}
         </button>
@@ -566,18 +703,18 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: C.bg, fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif", paddingBottom: 70, display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "fixed", inset: 0, background: C.bg, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif", paddingBottom: 70, display: "flex", flexDirection: "column" }}>
       <div style={{ maxWidth: 480, margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
         {/* 10번: 고정 헤더 영역 */}
         <div style={{ padding: "20px 16px 0", flexShrink: 0, background: C.bg }}>
           {/* 상단 바 */}
           <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, minHeight: 48 }}>
-            <button onClick={() => go("courseSelect")} style={{ background: C.primaryLight, border: "none", borderRadius: 20, padding: "8px 16px", fontWeight: 700, fontSize: 14, color: C.primaryDark, cursor: "pointer" }}>
+            <button onClick={() => go("courseSelect")} style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 20, padding: "8px 16px", fontWeight: 700, fontSize: 14, color: C.primaryDark, cursor: "pointer", fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>
               Course ▾
             </button>
-            <div onClick={() => go("calendar")} style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4, background: C.accentLight, borderRadius: 20, padding: "8px 14px", cursor: "pointer" }}>
+            <div onClick={() => go("calendar")} style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4, background: "#fff", border: `1px solid ${C.border}`, borderRadius: 20, padding: "8px 14px", cursor: "pointer" }}>
               <span style={{ fontSize: 18 }}>🔥</span>
-              <span style={{ fontWeight: 800, fontSize: 16, color: C.accent }}>{streakDays}</span>
+              <span style={{ fontWeight: 800, fontSize: 16, color: C.accent, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{streakDays}</span>
             </div>
             <div style={{ position: "relative" }}>
               <img src={user?.photoURL || duckImg} alt="profile" onClick={() => setMenuOpen((v) => !v)}
@@ -596,12 +733,12 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
             <div style={{ marginBottom: 12 }}>
               {selectedCat && <div style={{ fontSize: 13, fontWeight: 600, color: C.sub, marginBottom: 4, textAlign: "left" }}>{selectedCat.Name}</div>}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: C.text, textAlign: "left", flex: 1 }}>{selectedSource.Name}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.text, textAlign: "left", flex: 1, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{selectedSource.Name}</div>
                 <button onClick={() => {
                   const targetLesson = selectedLesson || todayLesson || sortedLessons[0];
                   if (targetLesson) go("scriptDetail", { lessonId: targetLesson.LessonID, sourceId: activeSourceId, fromHome: true });
                 }}
-                  style={{ background: C.primaryLight, border: "none", borderRadius: 10, width: 44, height: 44, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>📖</button>
+                  style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, width: 44, height: 44, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><IconScript size={20} color={C.primaryDark} /></button>
               </div>
             </div>
           )}
@@ -629,7 +766,7 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: C.text, textAlign: "left", flex: 1 }}>{l.Title}</div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: C.text, textAlign: "left", flex: 1, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{l.Title}</div>
                     <span style={{ color: C.sub, fontSize: 18, marginLeft: 8, transform: isSelected ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}>›</span>
                   </div>
                   {(isDone || isInProgress) && (
@@ -706,13 +843,13 @@ function CourseSelectScreen({ go, categories, sources, lessons, setSelectedSourc
         <Header title="교재 선택" onBack={() => go("home")} />
         {catGroups.map(({ cat, srcs }) => (
           <div key={cat.CategoryID} style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 17, fontWeight: 700, color: C.done, marginBottom: 8 }}>{cat.Name}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.done, marginBottom: 8, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{cat.Name}</div>
             {srcs.map((src) => (
               <div key={src.SourceID}
                 onClick={() => { setSelectedSourceId(src.SourceID); go("home"); }}
                 style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left" }}>{src.Name}</div>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left", fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{src.Name}</div>
                   <div style={{ fontSize: 12, color: C.sub, marginTop: 2, textAlign: "left" }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
                 </div>
                 <span style={{ color: C.sub, fontSize: 20 }}>›</span>
@@ -820,9 +957,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
         </div>
         {spokenText && <div style={{ ...S.card, fontSize: 13, color: C.sub, marginBottom: 12 }}>내 답 : {spokenText}</div>}
         {feedback && <div style={{ textAlign: "center", color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 12 }}>{feedback}</div>}
-        <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>
-          {idx + 1 < total ? "다음" : round < totalRounds ? "2회차 시작" : "완료! 문장 만들기"}
-        </button>
+        <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>다음</button>
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
@@ -852,52 +987,6 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   useEffect(() => { if (resume && savedIdx > 0) setResumeModal(true); }, []);
   const handleResumeContinue = () => setResumeModal(false);
   const handleResumeFresh = () => { setIdx(0); setResumeModal(false); };
-
-  const getChunks = (sentence) => {
-    const CONJUNCTIONS = /^(and|but|or|so|because|until|when|while|if|before|after|though|although|unless|that|which|who)$/i;
-    const PREPOSITIONS = /^(for|in|on|at|of|with|by|from|about|into|through|during|a|an|the)$/i;
-    const words = sentence.split(" ");
-
-    // 각 문장을 접속사/전치사 기준으로 쪼개는 내부 함수
-    const splitOne = (s) => {
-      const ws = s.split(" ");
-      if (ws.length <= 3) return [s];
-      let chunks = [];
-      let current = [];
-      for (let i = 0; i < ws.length; i++) {
-        if (i > 0 && current.length >= 2 && (CONJUNCTIONS.test(ws[i]) || PREPOSITIONS.test(ws[i]))) {
-          chunks.push(current.join(" "));
-          current = [ws[i]];
-        } else {
-          current.push(ws[i]);
-        }
-      }
-      if (current.length > 0) chunks.push(current.join(" "));
-      // 너무 긴 청크 추가 분리
-      const out = [];
-      for (const chunk of chunks) {
-        const cw = chunk.split(" ");
-        if (cw.length > 8) {
-          const mid = Math.ceil(cw.length / 2);
-          out.push(cw.slice(0, mid).join(" "));
-          out.push(cw.slice(mid).join(" "));
-        } else { out.push(chunk); }
-      }
-      return out.length > 1 ? out : [s];
-    };
-
-    // 구두점 기준으로 먼저 문장 분리
-    const punctChunks = sentence.split(/(?<=[.?!,])\s+/).filter(s => s.trim());
-    if (punctChunks.length > 1) {
-      // 각 문장도 추가로 쪼개기
-      const all = [];
-      for (const pc of punctChunks) { splitOne(pc).forEach(c => all.push(c)); }
-      return all;
-    }
-
-    if (words.length <= 3) return [sentence];
-    return splitOne(sentence);
-  };
 
   const [chunkOptions, setChunkOptions] = useState(() => shuffle(getChunks(curItem?.English || "").map((c, i) => ({ id: i, text: c }))));
 
@@ -936,9 +1025,10 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
       <div style={S.inner}>
         <Header title="문장 만들기" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }} />
         <ProgressBar current={idx} total={shuffledItems.length} />
-        <div style={{ ...S.card, marginBottom: 16 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{curItem.Korean}</div>
+        <div style={{ ...S.card, textAlign: "center", minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center", marginBottom: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: C.text, lineHeight: 1.6 }}>{curItem.Korean}</div>
         </div>
+        <div style={{ width: "100%", height: 1, background: C.borderLight, margin: "28px 0" }} />
         <div style={{ minHeight: 56, border: `2px dashed ${result === true ? C.accent : result === false ? C.error : C.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14, background: "#fff" }}>
           {selected.length === 0
             ? <span style={{ color: C.sub, fontSize: 13 }}>청크를 순서대로 선택하세요</span>
@@ -1043,12 +1133,15 @@ function StepVideoScreen({ go, nav, lessons, setUserData }) {
     <div style={S.page}>
       <div style={S.inner}>
         <Header title="영상 보기" onBack={() => go("home")} />
+        {lesson?.Title && (
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.text, lineHeight: 1.5, marginBottom: 14 }}>{lesson.Title}</div>
+        )}
         {videoId && (
           <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 16, aspectRatio: "16/9" }}>
             <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}`} frameBorder="0" allowFullScreen style={{ display: "block" }} />
           </div>
         )}
-        <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>다음: 따라읽기</button>
+        <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>다음</button>
       </div>
     </div>
   );
@@ -1322,7 +1415,7 @@ function ScriptTab({ go, sources, lessons, categories }) {
               <div key={src.SourceID} onClick={() => go("scriptSource", { sourceId: src.SourceID })}
                 style={{ ...S.card, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left" }}>{src.Name}</div>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: C.text, textAlign: "left", fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{src.Name}</div>
                   <div style={{ fontSize: 12, color: C.sub, marginTop: 2, textAlign: "left" }}>{lessons.filter((l) => l.SourceID === src.SourceID).length}개 레슨</div>
                 </div>
                 <span style={{ color: C.sub, fontSize: 20 }}>›</span>
@@ -1417,7 +1510,10 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     Promise.all([fetchSheet("Category"), fetchSheet("Source"), fetchSheet("Lesson"), fetchSheet("Item")])
-      .then(([cats, srcs, lsns, itms]) => { setCategories(cats); setSources(srcs); setLessons(lsns); setItems(itms); setDataLoaded(true); });
+      .then(([cats, srcs, lsns, itms]) => {
+        setCategories(cats); setSources(srcs); setLessons(lsns); setItems(itms); setDataLoaded(true);
+      })
+      .catch((err) => console.log("DEBUG fetch error", err));
   }, [user]);
 
   const setUserData = useCallback((updater) => {
@@ -1459,7 +1555,7 @@ export default function App() {
     }
   }, []);
 
-  const loadingStyle = { position: "fixed", inset: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, fontFamily: "'Pretendard',sans-serif" };
+  const loadingStyle = { position: "fixed", inset: 0, background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, fontFamily: "'SUIT',sans-serif" };
 
   if (authLoading) return (
     <div style={loadingStyle}>

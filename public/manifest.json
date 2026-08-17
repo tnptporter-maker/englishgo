@@ -4,8 +4,8 @@
   "description": "영어 학습 앱",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FFD966",
-  "theme_color": "#FFD966",
+  "background_color": "#F2F4F6",
+  "theme_color": "#F2F4F6",
   "orientation": "portrait",
   "icons": [
     {

@@ -179,10 +179,11 @@ const getItemChunks = (item) => {
   return getChunks(item.English || "");
 };
 // 학습화면에서 바로 메모를 추가할 때 쓰는 공용 함수
-const addQuickMemo = (setUserData, text, context) => {
+// front: 카드 앞면(문장/레슨명), back: 사용자가 적은 메모(카드 뒷면), context: 어느 학습단계에서 적었는지 태그
+const addQuickMemo = (setUserData, front, back, context) => {
   setUserData((prev) => ({
     ...prev,
-    memos: [{ id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: text, back: "", context: context || "", createdAt: today() }, ...(prev.memos || [])],
+    memos: [{ id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: front || "", back: back || "", context: context || "", createdAt: today() }, ...(prev.memos || [])],
   }));
 };
 const calcNextReview = (level) => {
@@ -403,7 +404,7 @@ function Header({ title, onBack, onQuit, onHome, onMemo }) {
   );
 }
 
-function MemoQuickSheet({ visible, contextLabel, onClose, onSave }) {
+function MemoQuickSheet({ visible, tagLabel, onClose, onSave }) {
   const [text, setText] = useState("");
   useEffect(() => { if (visible) setText(""); }, [visible]);
   if (!visible) return null;
@@ -415,10 +416,10 @@ function MemoQuickSheet({ visible, contextLabel, onClose, onSave }) {
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "22px 22px 28px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 32px rgba(0,0,0,0.15)" }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: C.border, margin: "0 auto 18px" }} />
-        <div style={{ fontWeight: 800, fontSize: 16, color: C.text, marginBottom: contextLabel ? 6 : 14 }}>📝 메모하기</div>
-        {contextLabel && <div style={{ fontSize: 12, color: C.sub, marginBottom: 14, lineHeight: 1.5 }}>{contextLabel}</div>}
-        <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="지금 배운 내용을 메모해보세요"
-          style={{ ...S.input, minHeight: 90, marginBottom: 14, display: "block" }} />
+        <div style={{ fontWeight: 800, fontSize: 16, color: C.text, marginBottom: tagLabel ? 6 : 14 }}>📝 메모하기</div>
+        {tagLabel && <div style={{ fontSize: 12, color: C.sub, marginBottom: 14 }}>{tagLabel}</div>}
+        <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="지금 생각난 걸 자유롭게 적어보세요 (예: in/at 차이, these days vs nowadays...)"
+          style={{ ...S.input, minHeight: 100, marginBottom: 14, display: "block" }} />
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{ ...S.btn, flex: 1, background: "#fff", color: C.sub, border: `1.5px solid ${C.border}` }}>취소</button>
           <button onClick={handleSave} disabled={!text.trim()} style={{ ...S.btn, ...S.btnPrimary, flex: 1, opacity: text.trim() ? 1 : 0.5 }}>저장</button>
@@ -529,7 +530,7 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
   const curItem = shuffledItems[idx];
   const hintChunks = curItem ? getItemChunks(curItem) : [];
 
-  useEffect(() => { onIdxChange?.(idx); }, [idx]);
+  useEffect(() => { onIdxChange?.(idx, curItem); }, [idx]);
   useEffect(() => { setHintCount(0); }, [idx]);
 
   const { listening, startMic, stopMic } = useMic((text) => setAnswer(text));
@@ -621,6 +622,8 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
   const [resumeModal, setResumeModal] = useState(false);
   const [resumeTarget, setResumeTarget] = useState(null);
   const lessonRefs = useRef({});
+  const scrollRef = useRef(null);
+  const [scales, setScales] = useState({});
 
   const { studyDays = [], quizProgress = {} } = userData;
 
@@ -670,14 +673,47 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
     setSelectedLesson(target || sortedLessons[0] || null);
   }, [activeSourceId, sortedLessons.length]);
 
-  // 레슨 선택 시 해당 레슨으로 스크롤 (13번)
+  // 동그라미 원근법: 화면(스크롤 영역) 정중앙에 있는 동그라미가 제일 크고, 위/아래로 멀어질수록 작아지게
+  const updateScales = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const containerCenter = rect.top + rect.height / 2;
+    const next = {};
+    sortedLessons.forEach((l) => {
+      const el = lessonRefs.current[l.LessonID];
+      if (!el) return;
+      const elRect = el.getBoundingClientRect();
+      const center = elRect.top + elRect.height / 2;
+      const dist = Math.abs(center - containerCenter);
+      const t = Math.min(1, dist / 260);
+      next[l.LessonID] = 1 - t * 0.42;
+    });
+    setScales(next);
+  }, [sortedLessons]);
+
+  // 레슨 선택 시 해당 레슨을 화면 가운데로 스크롤 (13번)
   useEffect(() => {
     if (selectedLesson) {
       setTimeout(() => {
-        lessonRefs.current[selectedLesson.LessonID]?.scrollIntoView({ behavior: "smooth", block: "start" });
+        lessonRefs.current[selectedLesson.LessonID]?.scrollIntoView({ behavior: "smooth", block: "center" });
+        updateScales();
       }, 100);
     }
   }, [selectedLesson]);
+
+  useEffect(() => {
+    updateScales();
+    const container = scrollRef.current;
+    if (!container) return;
+    let raf = null;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { updateScales(); raf = null; });
+    };
+    container.addEventListener("scroll", onScroll);
+    return () => container.removeEventListener("scroll", onScroll);
+  }, [updateScales]);
 
   const streakDays = (() => {
     if (!studyDays.length) return 0;
@@ -707,7 +743,7 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
     if (hasVideo) { steps.push({ id: "stepVideo", type: "video", label: "Video", num: num++ }); }
     steps.push({ id: "stepRead", type: "read", label: "Repeat", num: num++ });
     steps.push({ id: "stepBuild", type: "build", label: "Writing", num: num++ });
-    steps.push({ id: "stepQuiz", type: "quiz", label: "Speaking Test", num: num++ });
+    steps.push({ id: "stepQuiz", type: "quiz", label: "Speaking", num: num++ });
     steps.push({ id: "stepDiary", type: "diary", label: "Diary", num: num++ });
     return steps;
   };
@@ -799,88 +835,151 @@ function HomeScreen({ go, nav, user, userData, setUserData, categories, sources,
           <div style={{ height: 1, background: C.border }} />
         </div>
 
-        {/* 레슨 리스트 (스크롤 영역) */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 20px" }}>
-          {sortedLessons.map((l) => {
-            const key = `${l.LessonID}_${l.SourceID}`;
-            const qp = quizProgress[key];
-            const isDone = qp === "done";
-            const isInProgress = qp && qp !== "done";
-            const isSelected = selectedLesson?.LessonID === l.LessonID;
-            const sd = userData.stepDone?.[key] || {};
-            const stepList = getStepList(l);
+        {/* 레슨 리스트 (동그라미 스크롤 영역) */}
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "18px 20px 20px" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            {sortedLessons.map((l, i) => {
+              const key = `${l.LessonID}_${l.SourceID}`;
+              const qp = quizProgress[key];
+              const isDone = qp === "done";
+              const isInProgress = qp && qp !== "done";
+              const isSelected = selectedLesson?.LessonID === l.LessonID;
+              const sd = userData.stepDone?.[key] || {};
+              const stepList = getStepList(l);
+              const dayNum = i + 1;
+              const scale = scales[l.LessonID] ?? 1;
+              const size = Math.round(92 * scale);
 
-            return (
-              <div key={l.LessonID} ref={(el) => { lessonRefs.current[l.LessonID] = el; }} style={{ marginBottom: 10 }}>
-                <div
-                  style={{ ...S.card, marginBottom: 0, cursor: "pointer", border: isSelected ? `2px solid ${C.primary}` : `1.5px solid ${C.border}` }}
-                  onClick={() => {
-                    if (isSelected) { setSelectedLesson(null); return; }
-                    setSelectedLesson(l);
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: C.text, textAlign: "left", flex: 1, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{l.Title}</div>
-                    <span style={{ color: C.sub, fontSize: 18, marginLeft: 8, transform: isSelected ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}>›</span>
-                  </div>
-                  {(isDone || isInProgress) && (
-                    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                      {isDone && <Badge label="완료" color={C.done} bg={C.doneBg} />}
-                      {isInProgress && <Badge label="진행중" color={C.accent} bg={C.accentLight} />}
+              if (isSelected) {
+                return (
+                  <div key={l.LessonID} ref={(el) => { lessonRefs.current[l.LessonID] = el; }}
+                    style={{ width: "100%", padding: "8px 8px 26px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <div onClick={() => setSelectedLesson(null)} style={{ textAlign: "center", cursor: "pointer", marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>Day {dayNum}</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginTop: 3, fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif" }}>{l.Title}</div>
                     </div>
-                  )}
+                    <StepCarousel stepList={stepList} qp={qp} sd={sd}
+                      onStepClick={(step) => go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID, resume: true })} />
+                  </div>
+                );
+              }
+
+              return (
+                <div key={l.LessonID} ref={(el) => { lessonRefs.current[l.LessonID] = el; }}
+                  onClick={() => setSelectedLesson(l)}
+                  style={{
+                    width: size, height: size, borderRadius: "50%", marginBottom: Math.round(16 * scale), cursor: "pointer",
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    background: isInProgress ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : isDone ? "#DCF5E3" : "#E7E9EC",
+                    color: isInProgress ? "#fff" : isDone ? "#1F9D55" : "#9AA4B0",
+                    fontWeight: 800, fontSize: Math.max(11, Math.round(15 * scale)),
+                    fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif",
+                    boxShadow: isInProgress ? "0 10px 24px rgba(49,130,246,0.3)" : isDone ? "0 6px 14px rgba(34,197,94,0.15)" : "none",
+                  }}>
+                  Day {dayNum}
+                  {isDone && <span style={{ fontSize: 10, marginTop: 2 }}>✓</span>}
                 </div>
-
-                {/* 7번: 동그라미 하위학습 + 6번: 체크 표시 + 8번: Start 버튼 */}
-                {isSelected && (
-                  <div style={{ background: C.primaryLight, borderRadius: "0 0 16px 16px", padding: "16px 16px 16px" }}>
-                    <div style={{ display: "flex", gap: 12, overflowX: "auto", marginBottom: 16, paddingBottom: 4, WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-                      {stepList.map((step) => {
-                        const stepKey = step.id.replace("step", "").toLowerCase();
-                        const isDoneStep = step.id === "stepQuiz" ? qp === "done" : sd[stepKey];
-                        return (
-                          <div key={step.id}
-                            onClick={() => go(step.id, { lessonId: l.LessonID, sourceId: l.SourceID, resume: true })}
-                            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", width: 56 }}>
-                            <div style={{
-                              position: "relative",
-                              width: 48, height: 48, borderRadius: "50%",
-                              background: isDoneStep ? C.primary : "#fff",
-                              border: `2px solid ${isDoneStep ? C.primary : C.border}`,
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                            }}>
-                              <StepIcon type={step.type} color={isDoneStep ? "#fff" : C.primaryDark} />
-                              {isDoneStep && (
-                                <div style={{
-                                  position: "absolute", top: -2, right: -2,
-                                  width: 16, height: 16, borderRadius: "50%",
-                                  background: "#22C55E", display: "flex", alignItems: "center", justifyContent: "center",
-                                }}>
-                                  <span style={{ color: "#fff", fontSize: 10, fontWeight: 900 }}>✓</span>
-                                </div>
-                              )}
-                            </div>
-                            <div style={{ fontWeight: 600, fontSize: 10, color: isDoneStep ? C.primaryDark : C.sub, textAlign: "center", lineHeight: 1.2 }}>{step.label}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <button onClick={() => handleStart(l)}
-                      style={{ ...S.btn, ...S.btnPrimary, borderRadius: 14, fontSize: 16, padding: "14px" }}>
-                      Start
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {/* 13번: 마지막 레슨도 상단 스크롤 가능하도록 하단 여백 */}
-          <div style={{ height: 400 }} />
+              );
+            })}
+            {/* 13번: 마지막 레슨도 상단 스크롤 가능하도록 하단 여백 */}
+            <div style={{ height: 300, flexShrink: 0 }} />
+          </div>
         </div>
       </div>
       {/* 9번: 이어하기 모달 */}
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleFresh }, { label: "이어하기", primary: true, onClick: handleResume }]} />
+    </div>
+  );
+}
+
+// 홈화면에서 Day를 펼쳤을 때 나오는 미니 스와이프 캐러셀 (카드박스 없이 가운데 학습단계만 크게)
+function StepCarousel({ stepList, qp, sd, onStepClick }) {
+  const scrollRef = useRef(null);
+  const itemRefs = useRef({});
+  const [active, setActive] = useState(0);
+
+  const defaultIdx = (() => {
+    for (let i = 0; i < stepList.length; i++) {
+      const step = stepList[i];
+      const stepKey = step.id.replace("step", "").toLowerCase();
+      const isDoneStep = step.id === "stepQuiz" ? qp === "done" : sd[stepKey];
+      if (!isDoneStep) return i;
+    }
+    return stepList.length - 1;
+  })();
+
+  const updateActive = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const containerCenter = rect.left + rect.width / 2;
+    let closestIdx = 0, closestDist = Infinity;
+    stepList.forEach((step, i) => {
+      const el = itemRefs.current[step.id];
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const dist = Math.abs((r.left + r.width / 2) - containerCenter);
+      if (dist < closestDist) { closestDist = dist; closestIdx = i; }
+    });
+    setActive(closestIdx);
+  }, [stepList]);
+
+  useEffect(() => {
+    const el = itemRefs.current[stepList[defaultIdx]?.id];
+    if (el) el.scrollIntoView({ behavior: "auto", inline: "center", block: "nearest" });
+    setActive(defaultIdx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    let raf = null;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { updateActive(); raf = null; });
+    };
+    container.addEventListener("scroll", onScroll);
+    return () => container.removeEventListener("scroll", onScroll);
+  }, [updateActive]);
+
+  return (
+    <div style={{ width: "100%" }}>
+      <div ref={scrollRef} style={{ display: "flex", overflowX: "auto", scrollSnapType: "x mandatory", gap: 16, padding: "0 calc(50% - 36px)", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+        {stepList.map((step, i) => {
+          const stepKey = step.id.replace("step", "").toLowerCase();
+          const isDoneStep = step.id === "stepQuiz" ? qp === "done" : sd[stepKey];
+          const isActive = i === active;
+          const size = isActive ? 72 : 44;
+          return (
+            <div key={step.id} ref={(el) => { itemRefs.current[step.id] = el; }}
+              onClick={() => onStepClick(step)}
+              style={{ scrollSnapAlign: "center", flexShrink: 0, width: 72, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}>
+              <div style={{
+                position: "relative", width: size, height: size, borderRadius: "50%", transition: "width 0.2s, height 0.2s, opacity 0.2s",
+                background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDoneStep ? "#E4ECFB" : "#fff"),
+                boxShadow: isActive ? "0 12px 24px rgba(49,130,246,0.35)" : "0 4px 10px rgba(0,0,0,0.05)",
+                opacity: isActive ? 1 : 0.65,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <StepIcon type={step.type} color={isActive ? "#fff" : (isDoneStep ? C.primaryDark : C.sub)} />
+                {isDoneStep && !isActive && (
+                  <div style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#22C55E", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ color: "#fff", fontSize: 8, fontWeight: 900 }}>✓</span>
+                  </div>
+                )}
+              </div>
+              <div style={{ fontSize: isActive ? 12 : 10, fontWeight: isActive ? 800 : 600, color: isActive ? C.text : C.sub, transition: "all 0.2s" }}>{step.label}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 14 }}>
+        {stepList.map((step, i) => (
+          <div key={step.id} style={{ width: i === active ? 14 : 5, height: 5, borderRadius: 3, background: i === active ? C.primary : "#D5DCE3", transition: "all 0.2s" }} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -1029,8 +1128,8 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
-      <MemoQuickSheet visible={memoOpen} contextLabel={curItem.English} onClose={() => setMemoOpen(false)}
-        onSave={(text) => { addQuickMemo(setUserData, text, curItem.English); setMemoOpen(false); }} />
+      <MemoQuickSheet visible={memoOpen} tagLabel="Repeat 화면에서" onClose={() => setMemoOpen(false)}
+        onSave={(text) => { addQuickMemo(setUserData, text, "", "Repeat"); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1125,8 +1224,8 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
-      <MemoQuickSheet visible={memoOpen} contextLabel={curItem.English} onClose={() => setMemoOpen(false)}
-        onSave={(text) => { addQuickMemo(setUserData, text, curItem.English); setMemoOpen(false); }} />
+      <MemoQuickSheet visible={memoOpen} tagLabel="Writing 화면에서" onClose={() => setMemoOpen(false)}
+        onSave={(text) => { addQuickMemo(setUserData, text, "", "Writing"); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1170,7 +1269,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
     <div style={S.page}>
       <div style={{ ...S.inner, textAlign: "center", paddingTop: 60 }}>
         <img src={duck2Img} alt="완료" style={{ width: 120, marginBottom: 20 }} />
-        <div style={{ fontSize: 24, fontWeight: 900, color: C.text, marginBottom: 8 }}>Speaking Test 완료! 🎉</div>
+        <div style={{ fontSize: 24, fontWeight: 900, color: C.text, marginBottom: 8 }}>Speaking 완료! 🎉</div>
         <div style={{ color: C.sub, marginBottom: 32 }}>수고했어요! 다이어리를 작성해볼까요?</div>
         <button onClick={() => go("stepDiary", { lessonId, sourceId })} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 12 }}>📔 Diary 쓰기</button>
         <button onClick={() => go("home")} style={{ ...S.btn, ...S.btnGhost }}>홈으로 돌아가기</button>
@@ -1181,7 +1280,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="Speaking Test" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }}
+        <Header title="Speaking" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }}
           onMemo={() => setMemoOpen(true)} />
         <QuizCoreWithIdx rawItems={lessonItems} initIdx={startIdx}
           onResult={handleResult}
@@ -1190,8 +1289,8 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
-      <MemoQuickSheet visible={memoOpen} contextLabel="Speaking Test" onClose={() => setMemoOpen(false)}
-        onSave={(text) => { addQuickMemo(setUserData, text, "Speaking Test"); setMemoOpen(false); }} />
+      <MemoQuickSheet visible={memoOpen} tagLabel="Speaking 화면에서" onClose={() => setMemoOpen(false)}
+        onSave={(text) => { addQuickMemo(setUserData, text, "", "Speaking"); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1222,8 +1321,8 @@ function StepVideoScreen({ go, nav, lessons, setUserData }) {
         )}
         <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>다음</button>
       </div>
-      <MemoQuickSheet visible={memoOpen} contextLabel={lesson?.Title} onClose={() => setMemoOpen(false)}
-        onSave={(text) => { addQuickMemo(setUserData, text, lesson?.Title); setMemoOpen(false); }} />
+      <MemoQuickSheet visible={memoOpen} tagLabel="Video 화면에서" onClose={() => setMemoOpen(false)}
+        onSave={(text) => { addQuickMemo(setUserData, text, "", "Video"); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1260,8 +1359,8 @@ function StepDiaryScreen({ go, nav, lessons, sources, userData, setUserData }) {
         <button onClick={handleSave} disabled={!content.trim()} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 12, opacity: content.trim() ? 1 : 0.5 }}>저장하기</button>
         <button onClick={() => go("home")} style={{ ...S.btn, ...S.btnGhost }}>건너뛰기</button>
       </div>
-      <MemoQuickSheet visible={memoOpen} contextLabel={lesson?.Title} onClose={() => setMemoOpen(false)}
-        onSave={(text) => { addQuickMemo(setUserData, text, lesson?.Title); setMemoOpen(false); }} />
+      <MemoQuickSheet visible={memoOpen} tagLabel="Diary 화면에서" onClose={() => setMemoOpen(false)}
+        onSave={(text) => { addQuickMemo(setUserData, text, "", "Diary"); setMemoOpen(false); }} />
     </div>
   );
 }
@@ -1296,7 +1395,7 @@ function ReviewTab({ userData, setUserData, items, go }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Header title="영어로 적기" onQuit={() => go("home")} />
+        <Header title="Today's Review" onQuit={() => go("home")} />
         <QuizCoreWithIdx rawItems={reviewItems} onResult={handleResult} onDone={() => setDone(true)} />
       </div>
     </div>
@@ -1344,6 +1443,7 @@ function LikeTab({ userData, setUserData, items }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
+        <div style={{ fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 20, textAlign: "center" }}>Like</div>
         {favItems.length > 0 && (
           <button onClick={() => setQuizMode(true)} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 16 }}>🎲 랜덤 QUIZ</button>
         )}
@@ -1434,10 +1534,9 @@ function MemoTab({ userData, setUserData }) {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <div style={{ fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 20, textAlign: "center" }}>메모장</div>
-        {memos.length > 0 && (
-          <button onClick={() => setQuizMode(true)} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 16 }}>🎴 카드 퀴즈 시작</button>
-        )}
+        <div style={{ fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 20, textAlign: "center" }}>Memo</div>
+        <button onClick={() => memos.length > 0 && setQuizMode(true)} disabled={memos.length === 0}
+          style={{ ...S.btn, ...S.btnPrimary, marginBottom: 12, opacity: memos.length === 0 ? 0.5 : 1, cursor: memos.length === 0 ? "default" : "pointer" }}>🎲 랜덤 QUIZ</button>
         <button onClick={() => setShowForm((v) => !v)} style={{ ...S.btn, ...S.btnSecondary, marginBottom: 16 }}>{showForm ? "닫기" : "+ 새 메모 추가"}</button>
         {showForm && (
           <div style={{ ...S.card, marginBottom: 20 }}>
@@ -1730,7 +1829,7 @@ export default function App() {
   }, []);
 
   const go = useCallback((s, n = {}) => {
-    const tabScreens = ["home", "review", "like", "diary", "script"];
+    const tabScreens = ["home", "review", "like", "diary", "script", "memo"];
     if (tabScreens.includes(s)) {
       setTab(s);
       setScreen(null);

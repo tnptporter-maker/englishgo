@@ -98,28 +98,44 @@ const pickBestVoice = () => {
     null
   );
 };
-let speakKeepAlive = null;
+// 문장이 길면 브라우저 TTS가 중간에 끊기는 문제가 있어서, 쉼표/접속사 단위로 잘게 나눠서
+// 순서대로 이어 재생한다 (한 번에 짧게 말하니까 끊기는 버그 자체가 거의 발생하지 않음)
+const splitForSpeech = (text) => {
+  const parts = String(text || "").split(/(?<=,)\s+|(?<=\.)\s+/).filter(Boolean);
+  const chunks = [];
+  let cur = "";
+  parts.forEach((p) => {
+    if (cur && (cur + " " + p).trim().length > 45) {
+      chunks.push(cur.trim());
+      cur = p;
+    } else {
+      cur = cur ? `${cur} ${p}` : p;
+    }
+  });
+  if (cur.trim()) chunks.push(cur.trim());
+  return chunks.length ? chunks : [text];
+};
+let speakGen = 0;
 const speak = (text) => {
   window.speechSynthesis.cancel();
-  if (speakKeepAlive) clearInterval(speakKeepAlive);
-  setTimeout(() => {
-    const u = new SpeechSynthesisUtterance(text);
+  const myGen = ++speakGen;
+  const chunks = splitForSpeech(text);
+  let i = 0;
+  const speakNext = () => {
+    if (myGen !== speakGen) return; // 그 사이에 새로운 speak()나 stopSpeak()가 호출됐으면 중단
+    if (i >= chunks.length) return;
+    const u = new SpeechSynthesisUtterance(chunks[i]);
     u.lang = "en-US"; u.rate = 0.9;
     const voice = pickBestVoice();
     if (voice) u.voice = voice;
-    u.onend = () => { if (speakKeepAlive) clearInterval(speakKeepAlive); };
-    u.onerror = () => { if (speakKeepAlive) clearInterval(speakKeepAlive); };
+    u.onend = () => { i++; speakNext(); };
+    u.onerror = () => { i++; speakNext(); };
     window.speechSynthesis.speak(u);
-    // 크롬 특유의 "말하다가 중간에 끊기는" 버그 방지용 (일정 간격으로 살짝 깨워줌)
-    speakKeepAlive = setInterval(() => {
-      if (!window.speechSynthesis.speaking) { clearInterval(speakKeepAlive); return; }
-      window.speechSynthesis.pause();
-      window.speechSynthesis.resume();
-    }, 4000);
-  }, 80);
+  };
+  setTimeout(speakNext, 80);
 };
 const stopSpeak = () => {
-  if (speakKeepAlive) clearInterval(speakKeepAlive);
+  speakGen++;
   window.speechSynthesis.cancel();
 };
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
@@ -1084,7 +1100,7 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
             <span key={r} style={{ fontSize: 12, fontWeight: 700, color: round === r ? C.primary : "#C4CBD3" }}>{r}회차</span>
           ))}
         </div>
-        <div style={{ textAlign: "center", marginBottom: 28, minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
+        <div style={{ textAlign: "center", marginBottom: 28, minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", padding: "0 34px" }}>
           <button onClick={toggleFav} style={{ position: "absolute", top: 0, right: 0, width: 30, height: 30, borderRadius: "50%", border: "none", background: "transparent", fontSize: 17, cursor: "pointer", color: isFav ? "#F5A623" : "#C4CBD3" }}>{isFav ? "★" : "☆"}</button>
           <div style={{ fontSize: 14, color: C.sub, marginBottom: 20, lineHeight: 1.7 }}>{curItem.Korean}</div>
           <div style={{ width: 26, height: 1, background: "#DCE2E8", margin: "0 auto 20px" }} />
@@ -1497,12 +1513,21 @@ function MemoTab({ userData, setUserData }) {
   const [front, setFront] = useState("");
   const [back, setBack] = useState("");
   const [quizMode, setQuizMode] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
-  const addMemo = () => {
+  const openNew = () => { setEditingId(null); setFront(""); setBack(""); setShowForm(true); };
+  const closeForm = () => { setShowForm(false); setEditingId(null); setFront(""); setBack(""); };
+  const startEdit = (m) => { setEditingId(m.id); setFront(m.front); setBack(m.back || ""); setShowForm(true); };
+
+  const saveMemo = () => {
     if (!front.trim()) return;
-    const newMemo = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: front.trim(), back: back.trim(), createdAt: today() };
-    setUserData((prev) => ({ ...prev, memos: [newMemo, ...(prev.memos || [])] }));
-    setFront(""); setBack(""); setShowForm(false);
+    if (editingId) {
+      setUserData((prev) => ({ ...prev, memos: (prev.memos || []).map((m) => m.id === editingId ? { ...m, front: front.trim(), back: back.trim() } : m) }));
+    } else {
+      const newMemo = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: front.trim(), back: back.trim(), createdAt: today() };
+      setUserData((prev) => ({ ...prev, memos: [newMemo, ...(prev.memos || [])] }));
+    }
+    closeForm();
   };
 
   const deleteMemo = (id) => {
@@ -1517,12 +1542,13 @@ function MemoTab({ userData, setUserData }) {
         <div style={{ fontWeight: 800, fontSize: 20, color: C.text, marginBottom: 20, textAlign: "center" }}>Memo</div>
         <button onClick={() => memos.length > 0 && setQuizMode(true)} disabled={memos.length === 0}
           style={{ ...S.btn, ...S.btnPrimary, marginBottom: 12, opacity: memos.length === 0 ? 0.5 : 1, cursor: memos.length === 0 ? "default" : "pointer" }}>🎲 랜덤 QUIZ</button>
-        <button onClick={() => setShowForm((v) => !v)} style={{ ...S.btn, ...S.btnSecondary, marginBottom: 16 }}>{showForm ? "닫기" : "+ 새 메모 추가"}</button>
+        <button onClick={() => (showForm ? closeForm() : openNew())} style={{ ...S.btn, ...S.btnSecondary, marginBottom: 16 }}>{showForm ? "닫기" : "+ 새 메모 추가"}</button>
         {showForm && (
           <div style={{ ...S.card, marginBottom: 20 }}>
+            {editingId && <div style={{ fontSize: 12, fontWeight: 700, color: C.primary, marginBottom: 8 }}>메모 수정</div>}
             <input value={front} onChange={(e) => setFront(e.target.value)} placeholder="단어 또는 문장 (앞면)" style={{ ...S.input, marginBottom: 10 }} />
             <textarea value={back} onChange={(e) => setBack(e.target.value)} placeholder="뜻 / 설명 (뒷면)" style={{ ...S.input, minHeight: 60, marginBottom: 10 }} />
-            <button onClick={addMemo} disabled={!front.trim()} style={{ ...S.btn, ...S.btnPrimary, opacity: front.trim() ? 1 : 0.5 }}>저장</button>
+            <button onClick={saveMemo} disabled={!front.trim()} style={{ ...S.btn, ...S.btnPrimary, opacity: front.trim() ? 1 : 0.5 }}>{editingId ? "수정 완료" : "저장"}</button>
           </div>
         )}
         {memos.length === 0 && !showForm && (
@@ -1530,11 +1556,11 @@ function MemoTab({ userData, setUserData }) {
         )}
         {memos.map((m) => (
           <div key={m.id} style={{ ...S.card, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
+            <div onClick={() => startEdit(m)} style={{ cursor: "pointer", flex: 1 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>{m.front}</div>
               {m.back && <div style={{ fontSize: 13, color: C.sub }}>{m.back}</div>}
             </div>
-            <button onClick={() => deleteMemo(m.id)} style={{ background: "none", border: "none", color: C.sub, fontSize: 14, cursor: "pointer" }}>✕</button>
+            <button onClick={(e) => { e.stopPropagation(); deleteMemo(m.id); }} style={{ background: "none", border: "none", color: C.sub, fontSize: 14, cursor: "pointer" }}>✕</button>
           </div>
         ))}
       </div>

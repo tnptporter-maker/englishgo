@@ -87,8 +87,40 @@ const S = {
   },
 };
 
+// 자주 쓰이는 축약형(I'd, gonna 등)을 정식 표현으로 풀어서 채점 시 같은 표현으로 취급되게 함
+const CONTRACTIONS = {
+  "i'm": "i am", "i'd": "i would", "i'll": "i will", "i've": "i have",
+  "you're": "you are", "you'd": "you would", "you'll": "you will", "you've": "you have",
+  "he's": "he is", "he'd": "he would", "he'll": "he will",
+  "she's": "she is", "she'd": "she would", "she'll": "she will",
+  "it's": "it is", "it'd": "it would", "it'll": "it will",
+  "we're": "we are", "we'd": "we would", "we'll": "we will", "we've": "we have",
+  "they're": "they are", "they'd": "they would", "they'll": "they will", "they've": "they have",
+  "that's": "that is", "that'll": "that will", "that'd": "that would",
+  "there's": "there is", "there'll": "there will", "there'd": "there would",
+  "who's": "who is", "who'll": "who will", "who'd": "who would",
+  "what's": "what is", "what're": "what are",
+  "where's": "where is", "when's": "when is", "why's": "why is", "how's": "how is",
+  "let's": "let us",
+  "isn't": "is not", "aren't": "are not", "wasn't": "was not", "weren't": "were not",
+  "don't": "do not", "doesn't": "does not", "didn't": "did not",
+  "can't": "cannot", "couldn't": "could not",
+  "won't": "will not", "wouldn't": "would not", "shouldn't": "should not", "mustn't": "must not",
+  "haven't": "have not", "hasn't": "has not", "hadn't": "had not",
+  "gonna": "going to", "wanna": "want to", "gotta": "got to",
+  "kinda": "kind of", "sorta": "sort of", "outta": "out of",
+  "lemme": "let me", "gimme": "give me", "dunno": "do not know",
+  "y'know": "you know", "ain't": "is not",
+};
+const expandContractions = (s) => {
+  let out = (s || "").toLowerCase();
+  Object.keys(CONTRACTIONS).forEach((k) => {
+    out = out.replace(new RegExp(`\\b${k}\\b`, "g"), CONTRACTIONS[k]);
+  });
+  return out;
+};
 const normalize = (s) =>
-  (s || "").toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+  expandContractions(s).replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
 const checkCorrect = (expected, given) => normalize(expected) === normalize(given);
 const similarityScore = (expected, given) => {
   const exp = normalize(expected).split(" ");
@@ -1359,7 +1391,7 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   if (done) return (
     <div style={S.page}>
       <div style={{ ...S.inner, textAlign: "center", paddingTop: 60 }}>
-        <img src={duck2Img} alt="완료" style={{ width: 120, marginBottom: 20 }} />
+        <img src={duck2Img} alt="완료" style={{ width: 120, marginBottom: 32 }} />
         <div style={{ fontSize: 24, fontWeight: 900, color: C.text, marginBottom: 8 }}>Speaking 완료! 🎉</div>
         <div style={{ color: C.sub, marginBottom: 32 }}>수고했어요! 다이어리를 작성해볼까요?</div>
         <button onClick={() => go("stepDiary", { lessonId, sourceId })} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 12 }}>📔 Diary 쓰기</button>

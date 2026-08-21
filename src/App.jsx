@@ -71,6 +71,20 @@ const S = {
     boxSizing: "border-box", background: "#fff", color: C.text,
     fontFamily: "inherit", resize: "none",
   },
+  // 학습 단계(Repeat/Writing/Speaking) 공용 레이아웃: 헤더 고정 + 가운데 스크롤 + 버튼 하단 고정
+  stepPage: {
+    position: "fixed", inset: 0, background: C.bg,
+    fontFamily: "'SUIT','Apple SD Gothic Neo',sans-serif",
+    display: "flex", flexDirection: "column",
+  },
+  stepTop: { maxWidth: 480, width: "100%", margin: "0 auto", padding: "20px 16px 0", boxSizing: "border-box", flexShrink: 0 },
+  stepBody: { maxWidth: 480, width: "100%", margin: "0 auto", padding: "0 16px 36px", boxSizing: "border-box", flex: "1 1 auto", minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" },
+  stepFooter: { maxWidth: 480, width: "100%", margin: "0 auto", padding: "10px 16px 20px", boxSizing: "border-box", flexShrink: 0 },
+  answerBox: {
+    width: "100%", minHeight: 90, borderRadius: 14, padding: "14px 16px",
+    fontSize: 15, lineHeight: 1.6, boxSizing: "border-box", fontFamily: "inherit",
+    border: `1.5px solid ${C.border}`, background: "#fff", color: C.text, resize: "none", outline: "none",
+  },
 };
 
 const normalize = (s) =>
@@ -613,41 +627,48 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
   if (!curItem) return null;
 
   return (
-    <div>
-      <ProgressBar current={idx} total={shuffledItems.length} />
-      <div style={{ textAlign: "center", minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "flex-start", marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
-          <button onClick={handleHint} disabled={submitted || hintCount >= hintChunks.length}
-            style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: hintCount > 0 ? "#FFF7E0" : "transparent", fontSize: 16, cursor: hintCount >= hintChunks.length ? "default" : "pointer", opacity: submitted || hintCount >= hintChunks.length ? 0.4 : 1, flexShrink: 0 }}>
-            💡
-          </button>
+    <>
+      <div style={S.stepBody}>
+        <ProgressBar current={idx} total={shuffledItems.length} />
+        <div style={{ textAlign: "center", minHeight: 100, display: "flex", flexDirection: "column", justifyContent: "flex-start", flexShrink: 0 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+            <button onClick={handleHint} disabled={submitted || hintCount >= hintChunks.length}
+              style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: hintCount > 0 ? "#FFF7E0" : "transparent", fontSize: 16, cursor: hintCount >= hintChunks.length ? "default" : "pointer", opacity: submitted || hintCount >= hintChunks.length ? 0.4 : 1, flexShrink: 0 }}>
+              💡
+            </button>
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.text, lineHeight: 1.6 }}>{curItem.Korean}</div>
+          {hintCount > 0 && (
+            <div style={{ marginTop: 14, padding: "10px 12px", background: "#FFF7E0", borderRadius: 10, fontSize: 14, color: "#8A6200", fontWeight: 600, lineHeight: 1.6 }}>
+              {hintChunks.slice(0, hintCount).join(" ")}
+            </div>
+          )}
         </div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: C.text, lineHeight: 1.6 }}>{curItem.Korean}</div>
-        {hintCount > 0 && (
-          <div style={{ marginTop: 14, padding: "10px 12px", background: "#FFF7E0", borderRadius: 10, fontSize: 14, color: "#8A6200", fontWeight: 600, lineHeight: 1.6 }}>
-            {hintChunks.slice(0, hintCount).join(" ")}
+        {!submitted ? (
+          <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="또는 직접 영어로 입력하세요"
+            style={{ ...S.answerBox, margin: "20px 0" }} />
+        ) : (
+          <div style={{
+            ...S.answerBox, margin: "20px 0", display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "center",
+            border: `1.5px solid ${result ? C.accent : C.errorBorder}`, background: result ? C.accentLight : C.errorBg,
+          }}>
+            <div style={{ fontWeight: 700, fontSize: 18, color: result ? C.accent : C.error, marginBottom: 10 }}>{result ? "정답!" : "오답"}</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{curItem.English}</div>
           </div>
         )}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, flexShrink: 0 }}>
+          <button onClick={() => speak(curItem.English)} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", fontSize: 18, cursor: "pointer", flexShrink: 0 }}>🔊</button>
+          <button onClick={listening ? stopMic : startMic} disabled={submitted} style={{ width: 84, height: 84, borderRadius: "50%", border: "none", background: listening ? "#F04452" : C.primary, color: "#fff", fontSize: 32, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 10px 24px ${listening ? "rgba(240,68,82,0.35)" : "rgba(49,130,246,0.35)"}`, cursor: "pointer", flexShrink: 0, opacity: submitted ? 0.4 : 1 }}>
+            {listening ? "■" : "🎤"}
+          </button>
+        </div>
       </div>
-      <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="또는 직접 영어로 입력하세요"
-        style={{ ...S.input, minHeight: 64, marginBottom: 28, display: "block" }} />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 24 }}>
-        <button onClick={() => speak(curItem.English)} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", fontSize: 18, cursor: "pointer", flexShrink: 0 }}>🔊</button>
-        <button onClick={listening ? stopMic : startMic} style={{ width: 84, height: 84, borderRadius: "50%", border: "none", background: listening ? "#F04452" : C.primary, color: "#fff", fontSize: 32, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 10px 24px ${listening ? "rgba(240,68,82,0.35)" : "rgba(49,130,246,0.35)"}`, cursor: "pointer", flexShrink: 0 }}>
-          {listening ? "■" : "🎤"}
-        </button>
+      <div style={S.stepFooter}>
+        {!submitted
+          ? <button onClick={handleSubmit} disabled={!answer.trim()} style={{ ...S.btn, ...S.btnPrimary, opacity: answer.trim() ? 1 : 0.5 }}>제출</button>
+          : <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>{idx + 1 < shuffledItems.length ? "다음" : "완료"}</button>}
       </div>
-      {!submitted
-        ? <button onClick={handleSubmit} disabled={!answer.trim()} style={{ ...S.btn, ...S.btnPrimary, opacity: answer.trim() ? 1 : 0.5 }}>제출</button>
-        : (
-          <>
-            <ResultCard correct={result} english={curItem.English} />
-            <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary, marginTop: 12 }}>
-              {idx + 1 < shuffledItems.length ? "다음" : "완료"}
-            </button>
-          </>
-        )}
-    </div>
+    </>
   );
 }
 
@@ -1126,30 +1147,39 @@ function StepReadScreen({ go, nav, items, sources, categories, userData, setUser
 
   if (!curItem) return null;
   return (
-    <div style={S.page}>
-      <div style={S.inner}>
+    <div style={S.stepPage}>
+      <div style={S.stepTop}>
         <Header title="Repeat" onQuit={() => { stopMic(); stopSpeak(); setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }}
           onMemo={() => setMemoOpen(true)} />
         <ProgressBar current={(round - 1) * total + idx} total={totalRounds * total} />
-        <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 28 }}>
-          {[1, 2].map((r) => (
-            <span key={r} style={{ fontSize: 12, fontWeight: 700, color: round === r ? C.primary : "#C4CBD3" }}>{r}회차</span>
-          ))}
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", position: "relative" }}>
+          <div style={{ display: "flex", gap: 12 }}>
+            {[1, 2].map((r) => (
+              <span key={r} style={{ fontSize: 12, fontWeight: 700, color: round === r ? C.primary : "#C4CBD3" }}>{r}회차</span>
+            ))}
+          </div>
+          <button onClick={toggleFav} style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", width: 28, height: 28, borderRadius: "50%", border: "none", background: "transparent", fontSize: 17, cursor: "pointer", color: isFav ? "#F5A623" : "#C4CBD3" }}>{isFav ? "★" : "☆"}</button>
         </div>
-        <div style={{ textAlign: "center", marginBottom: 28, minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", padding: "0 34px" }}>
-          <button onClick={toggleFav} style={{ position: "absolute", top: 0, right: 0, width: 30, height: 30, borderRadius: "50%", border: "none", background: "transparent", fontSize: 17, cursor: "pointer", color: isFav ? "#F5A623" : "#C4CBD3" }}>{isFav ? "★" : "☆"}</button>
-          <div style={{ fontSize: 14, color: C.sub, marginBottom: 20, lineHeight: 1.7 }}>{curItem.Korean}</div>
-          <div style={{ width: 26, height: 1, background: "#DCE2E8", margin: "0 auto 20px" }} />
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{curItem.English}</div>
+      </div>
+      <div style={S.stepBody}>
+        <div style={{ textAlign: "center", marginTop: 28, marginBottom: 24, padding: "0 20px" }}>
+          <div style={{ minHeight: 48, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.7 }}>{curItem.Korean}</div>
+          </div>
+          <div style={{ width: 26, height: 1, background: "#DCE2E8", margin: "20px auto" }} />
+          <div style={{ minHeight: 70, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: C.text, lineHeight: 1.5 }}>{curItem.English}</div>
+          </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 4, height: 64, margin: "40px 0 16px" }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 4, height: 64, margin: "20px 0 16px" }}>
           {[14, 28, 44, 20, 36, 48, 22, 32, 16, 26].map((h, i) => (
             <div key={i} style={{ width: 4, height: h, borderRadius: 2, background: listening ? C.primary : "#B9C8F5", transition: "background 0.2s" }} />
           ))}
         </div>
-        {spokenText && <div style={{ fontSize: 13, color: C.sub, marginBottom: 12, textAlign: "center" }}>내 답 : {spokenText}</div>}
-        {feedback && <div style={{ textAlign: "center", color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 12 }}>{feedback}</div>}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
+        {feedback && <div style={{ textAlign: "center", color: C.accent, fontWeight: 700, fontSize: 16 }}>{feedback}</div>}
+      </div>
+      <div style={S.stepFooter}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 32, padding: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
             <button onClick={() => speak(curItem.English)} style={{ width: 48, height: 48, borderRadius: "50%", border: "none", background: "transparent", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>🔊</button>
             <button onClick={listening ? stopMic : startMic} style={{ width: 58, height: 58, borderRadius: "50%", border: "none", background: listening ? "#F04452" : C.primary, color: "#fff", fontSize: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: `0 4px 14px ${listening ? "rgba(240,68,82,0.4)" : "rgba(49,130,246,0.4)"}` }}>
@@ -1224,36 +1254,53 @@ function StepBuildScreen({ go, nav, items, sources, categories, userData, setUse
   if (!curItem) return null;
 
   return (
-    <div style={S.page}>
-      <div style={S.inner}>
+    <div style={S.stepPage}>
+      <div style={S.stepTop}>
         <Header title="Writing" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }}
           onMemo={() => setMemoOpen(true)} />
         <ProgressBar current={idx} total={shuffledItems.length} />
-        <div style={{ textAlign: "center", minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      </div>
+      <div style={S.stepBody}>
+        <div style={{ textAlign: "center", minHeight: 100, display: "flex", flexDirection: "column", justifyContent: "center", flexShrink: 0 }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: C.text, lineHeight: 1.6 }}>{curItem.Korean}</div>
         </div>
-        <div style={{ width: 26, height: 1, background: "#DCE2E8", margin: "28px auto" }} />
-        <div style={{ minHeight: 56, border: `2px dashed ${result === true ? C.accent : result === false ? C.error : C.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14, background: "#fff" }}>
-          {selected.length === 0
-            ? <span style={{ color: C.sub, fontSize: 13 }}>청크를 순서대로 선택하세요</span>
-            : <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{selected.map(s => s.text).join(" ")}</span>}
+        <div style={{ width: 26, height: 1, background: "#DCE2E8", margin: "20px auto" }} />
+        <div style={{
+          ...S.answerBox, display: "flex", flexDirection: "column", justifyContent: "center", marginBottom: 14,
+          borderStyle: result === null ? "dashed" : "solid", borderWidth: result === null ? 2 : 1.5,
+          borderColor: result === null ? C.border : result ? C.accent : C.errorBorder,
+          background: result === null ? "#fff" : result ? C.accentLight : C.errorBg,
+        }}>
+          {result === null ? (
+            selected.length === 0
+              ? <span style={{ color: C.sub, fontSize: 13 }}>청크를 순서대로 선택하세요</span>
+              : <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{selected.map(s => s.text).join(" ")}</span>
+          ) : (
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontWeight: 700, fontSize: 18, color: result ? C.accent : C.error, marginBottom: 10 }}>{result ? "정답!" : "오답"}</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{curItem.English}</div>
+            </div>
+          )}
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-          {chunkOptions.map((opt) => {
-            const isSelected = selected.find(s => s.id === opt.id);
-            return (
-              <button key={opt.id} onClick={() => isSelected ? handleDeselect(opt, selected.findIndex(s => s.id === opt.id)) : handleSelect(opt)}
-                style={{ background: isSelected ? C.primary : C.primaryLight, color: isSelected ? "#fff" : C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
-            );
-          })}
-        </div>
-        {result !== null && <ResultCard correct={result} english={curItem.English} />}
+        {result === null && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {chunkOptions.map((opt) => {
+              const isSelected = selected.find(s => s.id === opt.id);
+              return (
+                <button key={opt.id} onClick={() => isSelected ? handleDeselect(opt, selected.findIndex(s => s.id === opt.id)) : handleSelect(opt)}
+                  style={{ background: isSelected ? C.primary : C.primaryLight, color: isSelected ? "#fff" : C.primaryDark, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{opt.text}</button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <div style={S.stepFooter}>
         {result === null
-          ? <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+          ? <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setSelected([])} style={{ ...S.btn, flex: 1, background: "#fff", color: C.sub, border: `1.5px solid ${C.border}` }}>초기화</button>
               <button onClick={handleSubmit} disabled={selected.length === 0} style={{ ...S.btn, ...S.btnPrimary, flex: 1, opacity: selected.length === 0 ? 0.5 : 1 }}>제출</button>
             </div>
-          : <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary, marginTop: 12 }}>다음</button>}
+          : <button onClick={handleNext} style={{ ...S.btn, ...S.btnPrimary }}>다음</button>}
       </div>
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
@@ -1311,15 +1358,15 @@ function StepQuizScreen({ go, nav, items, userData, setUserData }) {
   );
 
   return (
-    <div style={S.page}>
-      <div style={S.inner}>
+    <div style={S.stepPage}>
+      <div style={S.stepTop}>
         <Header title="Speaking" onQuit={() => { setUserData((prev) => ({ ...prev, lastLessonId: lessonId, lastSourceId: sourceId, studyDays: prev.studyDays.includes(today()) ? prev.studyDays : [...prev.studyDays, today()] })); go("home"); }}
           onMemo={() => setMemoOpen(true)} />
-        <QuizCoreWithIdx rawItems={lessonItems} initIdx={startIdx}
-          onResult={handleResult}
-          onIdxChange={(i) => setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: String(i) } }))}
-          onDone={handleDone} />
       </div>
+      <QuizCoreWithIdx rawItems={lessonItems} initIdx={startIdx}
+        onResult={handleResult}
+        onIdxChange={(i) => setUserData((prev) => ({ ...prev, quizProgress: { ...prev.quizProgress, [key]: String(i) } }))}
+        onDone={handleDone} />
       <Modal visible={resumeModal} title="이어서 학습할까요?" desc="이전에 학습하다가 멈췄어요." small
         buttons={[{ label: "처음부터", onClick: handleResumeFresh }, { label: "이어하기", primary: true, onClick: handleResumeContinue }]} />
       <MemoQuickSheet visible={memoOpen} onClose={() => setMemoOpen(false)}

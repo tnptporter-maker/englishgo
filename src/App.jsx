@@ -152,7 +152,14 @@ const stopSpeak = () => {
   speakGen++;
   window.speechSynthesis.cancel();
 };
-const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+const shuffle = (arr) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
 const getChunks = (sentence) => {
   const CONJUNCTIONS = /^(and|but|or|so|because|until|when|while|if|before|after|though|although|unless|that|which|who)$/i;
   const PREPOSITIONS = /^(for|in|on|at|of|with|by|from|about|into|through|during|a|an|the)$/i;
@@ -613,7 +620,9 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
   const handleSubmit = () => {
     if (!answer.trim()) return;
     stopMic();
-    const correct = checkCorrect(curItem.English, answer);
+    // 쉼표/마침표 같은 문장부호는 이미 normalize에서 제거됨(정답 판정에 영향 없음).
+    // 완전히 똑같지 않아도 핵심 단어가 충분히 겹치면(80% 이상) 정답으로 인정 — 음성인식 오차를 감안한 관대한 채점.
+    const correct = checkCorrect(curItem.English, answer) || similarityScore(curItem.English, answer) >= 0.8;
     setResult(correct); setSubmitted(true);
     onResult?.(curItem.ItemID, correct);
   };
@@ -656,11 +665,13 @@ function QuizCoreWithIdx({ rawItems, initIdx = 0, onResult, onIdxChange, onDone 
             <div style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{curItem.English}</div>
           </div>
         )}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, flexShrink: 0 }}>
-          <button onClick={() => speak(curItem.English)} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", fontSize: 18, cursor: "pointer", flexShrink: 0 }}>🔊</button>
-          <button onClick={listening ? stopMic : startMic} disabled={submitted} style={{ width: 84, height: 84, borderRadius: "50%", border: "none", background: listening ? "#F04452" : C.primary, color: "#fff", fontSize: 32, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 10px 24px ${listening ? "rgba(240,68,82,0.35)" : "rgba(49,130,246,0.35)"}`, cursor: "pointer", flexShrink: 0, opacity: submitted ? 0.4 : 1 }}>
-            {listening ? "■" : "🎤"}
-          </button>
+        <div style={{ display: "flex", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 32, padding: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
+            <button onClick={() => speak(curItem.English)} style={{ width: 48, height: 48, borderRadius: "50%", border: "none", background: "transparent", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>🔊</button>
+            <button onClick={listening ? stopMic : startMic} disabled={submitted} style={{ width: 58, height: 58, borderRadius: "50%", border: "none", background: listening ? "#F04452" : C.primary, color: "#fff", fontSize: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: `0 4px 14px ${listening ? "rgba(240,68,82,0.4)" : "rgba(49,130,246,0.4)"}`, opacity: submitted ? 0.4 : 1 }}>
+              {listening ? "■" : "🎤"}
+            </button>
+          </div>
         </div>
       </div>
       <div style={S.stepFooter}>

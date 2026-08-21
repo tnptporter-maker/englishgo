@@ -197,10 +197,12 @@ const getItemChunks = (item) => {
 // 학습화면에서 바로 메모를 추가할 때 쓰는 공용 함수
 // front: 카드 앞면(문장/레슨명), back: 사용자가 적은 메모(카드 뒷면), context: 어느 학습단계에서 적었는지 태그
 const addQuickMemo = (setUserData, front, back) => {
+  const memo = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: front || "", back: back || "", createdAt: today(), updatedAt: new Date().toISOString(), deleted: false };
   setUserData((prev) => ({
     ...prev,
-    memos: [{ id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: front || "", back: back || "", createdAt: today() }, ...(prev.memos || [])],
+    memos: [memo, ...(prev.memos || [])],
   }));
+  pushMemoToSheet(memo);
 };
 const calcNextReview = (level) => {
   const days = REVIEW_INTERVALS[Math.min(level, REVIEW_INTERVALS.length - 1)];
@@ -243,8 +245,42 @@ const fetchSheet = async (sheetName) => {
   );
 };
 
+const MEMO_SYNC_URL = "https://script.google.com/macros/s/AKfycbxGl5pcNnep9H8n6l-_iYvQ92yJDSQI1f7Z-NC3f3NeAgto927RXYpRSCPYqTsgumk7-w/exec";
 
+const fetchMemoSheetRows = async () => {
+  try {
+    const res = await fetch(`${MEMO_SYNC_URL}?t=${Date.now()}`);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.log("DEBUG memo sync fetch error", err);
+    return [];
+  }
+};
 
+const pushMemoToSheet = (memo) => {
+  fetch(MEMO_SYNC_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(memo),
+  }).catch((err) => console.log("DEBUG memo sync push error", err));
+};
+
+const mergeMemos = (localMemos, sheetRows) => {
+  const map = new Map();
+  (localMemos || []).forEach((m) => map.set(m.id, m));
+  sheetRows.forEach((r) => {
+    const existing = map.get(r.id);
+    const rUpdatedAt = r.updatedAt || r.createdAt || "";
+    const eUpdatedAt = existing ? (existing.updatedAt || existing.createdAt || "") : "";
+    if (!existing || rUpdatedAt > eUpdatedAt) {
+      map.set(r.id, { id: r.id, front: r.front || "", back: r.back || "", createdAt: r.createdAt || today(), updatedAt: r.updatedAt || r.createdAt || today(), deleted: r.deleted === "TRUE" || r.deleted === true });
+    }
+  });
+  return Array.from(map.values())
+    .filter((m) => !m.deleted)
+    .sort((a, b) => (b.updatedAt || b.createdAt || "").localeCompare(a.updatedAt || a.createdAt || ""));
+};
 
 const DEFAULT_DATA = { progress: {}, studyDays: [], quizProgress: {}, favorites: {}, diaries: [], stepDone: {}, memos: [] };
 const loadUserData = async (uid) => {
@@ -1521,17 +1557,24 @@ function MemoTab({ userData, setUserData }) {
 
   const saveMemo = () => {
     if (!front.trim()) return;
+    const now = new Date().toISOString();
     if (editingId) {
-      setUserData((prev) => ({ ...prev, memos: (prev.memos || []).map((m) => m.id === editingId ? { ...m, front: front.trim(), back: back.trim() } : m) }));
+      const prevMemo = memos.find((m) => m.id === editingId);
+      const updated = { id: editingId, front: front.trim(), back: back.trim(), createdAt: prevMemo?.createdAt || today(), updatedAt: now, deleted: false };
+      setUserData((prev) => ({ ...prev, memos: (prev.memos || []).map((m) => m.id === editingId ? { ...m, front: front.trim(), back: back.trim(), updatedAt: now } : m) }));
+      pushMemoToSheet(updated);
     } else {
-      const newMemo = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: front.trim(), back: back.trim(), createdAt: today() };
+      const newMemo = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, front: front.trim(), back: back.trim(), createdAt: today(), updatedAt: now, deleted: false };
       setUserData((prev) => ({ ...prev, memos: [newMemo, ...(prev.memos || [])] }));
+      pushMemoToSheet(newMemo);
     }
     closeForm();
   };
 
   const deleteMemo = (id) => {
+    const target = memos.find((m) => m.id === id);
     setUserData((prev) => ({ ...prev, memos: (prev.memos || []).filter((m) => m.id !== id) }));
+    if (target) pushMemoToSheet({ ...target, deleted: true, updatedAt: new Date().toISOString() });
   };
 
   if (quizMode) return <MemoQuiz memos={memos} onExit={() => setQuizMode(false)} />;
@@ -1805,6 +1848,14 @@ export default function App() {
       })
       .catch((err) => console.log("DEBUG fetch error", err));
   }, [user]);
+
+  useEffect(() => {
+    if (!user || !dataLoaded) return;
+    fetchMemoSheetRows().then((rows) => {
+      if (!rows.length) return;
+      setUserData((prev) => ({ ...prev, memos: mergeMemos(prev.memos, rows) }));
+    });
+  }, [user, dataLoaded]);
 
   const setUserData = useCallback((updater) => {
     setUserDataRaw((prev) => {
